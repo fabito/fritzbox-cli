@@ -33,18 +33,15 @@ func newVPNListCommand() *cobra.Command {
 
 // runVPNList executes the VPN list command
 func runVPNList(cmd *cobra.Command, args []string) error {
-	// Get SID first
-	sid, err := authObj.GetSID()
-	if err != nil {
-		return fmt.Errorf("failed to get SID: %w", err)
-	}
-
-	// Create AHA client with proper URL
-	 routerURI := cfg.RouterURI
+	// Create AHA client with getSID function
+	routerURI := cfg.RouterURI
 	if !strings.HasPrefix(routerURI, "http://") && !strings.HasPrefix(routerURI, "https://") {
 		routerURI = "http://" + routerURI
 	}
-	client := aha.NewClient(routerURI, sid)
+	
+	client := aha.NewClient(routerURI, func() (string, error) {
+		return authObj.SIDManager.GetSID()
+	})
 
 	// List VPN connections
 	connections, err := client.ListVPNConnections()

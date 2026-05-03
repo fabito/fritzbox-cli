@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"encoding/xml"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -24,7 +23,9 @@ func NewSIDManager(soapCall func(service, action, body string) (string, error)) 
 
 // GetSID returns a valid SID, obtaining a new one if necessary
 func (s *SIDManager) GetSID() (string, error) {
+	slog.Debug("GetSID: called", "current_sid", s.sid, "expires_at", s.expiresAt)
 	if s.sid != "" && time.Now().Before(s.expiresAt) {
+		slog.Debug("GetSID: returning cached SID", "sid", s.sid)
 		return s.sid, nil
 	}
 	return s.Login()
@@ -32,6 +33,7 @@ func (s *SIDManager) GetSID() (string, error) {
 
 // Login obtains a new SID from the Fritz!Box
 func (s *SIDManager) Login() (string, error) {
+	slog.Debug("Login: calling soapCall")
 	soapBody := `<?xml version="1.0" encoding="utf-8"?>
 <s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
     <s:Body>
@@ -49,15 +51,17 @@ func (s *SIDManager) Login() (string, error) {
 		return "", fmt.Errorf("failed to call CreateUrlSID: %w", err)
 	}
 
-	slog.Debug("S-IDManager.Login: SOAP response", "response", resp[:min(len(resp), 500)])
+	slog.Debug("Login: SOAP response received", "response", resp[:min(len(resp), 500)])
 
-	sid, err := extractSID(resp)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse SID: %w", err)
+	// Extract SID using string parsing (more reliable than XML for this case)
+	sid := extractSIDFromString(resp)
+	if sid == "" {
+		return "", fmt.Errorf("failed to extract SID from response")
 	}
 
 	s.sid = sid
 	s.expiresAt = time.Now().Add(20 * time.Minute)
+	slog.Debug("Login: SID obtained", "sid", sid)
 	return sid, nil
 }
 
@@ -75,53 +79,27 @@ func (s *SIDManager) Refresh() error {
 	return err
 }
 
-// extractSID extracts SID from SOAP response
-func extractSID(resp string) (string, error) {
-	type Envelope struct {
-		Body struct {
-			CreateUrlSIDResponse struct {
-				URLSID string `xml:"NewX_AVM-DE_UrlSID"`
-			} `xml:"Body>X_AVM-DE_CreateUrlSIDResponse"`
-		} `xml:"Body"`
-	}
-
-	var env Envelope
-	decoder := xml.NewDecoder(strings.NewReader(resp))
-	if err := decoder.Decode(&env); err == nil {
-		return extractSIDFromURL(env.Body.CreateUrlSIDResponse.URLSID), nil
-	}
-
-	return extractSIDFromString(resp)
-}
-
-// extractSIDFromString does simple string parsing as fallback
-func extractSIDFromString(s string) (string, error) {
+// extractSIDFromString extracts SID from SOAP response string
+// Format: <NewX_AVM-DE_UrlSID>sid=XXX</NewX_AVM-DE_UrlSID>
+func extractSIDFromString(s string) string {
+	// Find "sid=" in the response
 	idx := strings.Index(s, "sid=")
 	if idx == -1 {
-		return "", fmt.Errorf("sid not found in response")
+		return ""
 	}
 
+	// Skip "sid="
 	start := idx + 4
+
+	// Find end of SID (until '<', '&', '"', or space)
 	end := start
-	for end < len(s) && s[end] != '&' && s[end] != '<' && s[end] != '"' && s[end] != ' ' {
+	for end < len(s) && s[end] != '<' && s[end] != '&' && s[end] != '"' && s[end] != ' ' {
 		end++
 	}
 
 	if start >= end {
-		return "", fmt.Errorf("invalid sid format")
-	}
-
-	return s[start:end], nil
-}
-
-func extractSIDFromURL(url string) string {
-	parts := strings.Split(url, "sid=")
-	if len(parts) < 2 {
 		return ""
 	}
-	sid := parts[1]
-	if idx := strings.Index(sid, "&"); idx != -1 {
-		sid = sid[:idx]
-	}
-	return sid
+
+	return s[start:end]
 }

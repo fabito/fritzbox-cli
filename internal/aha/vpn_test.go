@@ -42,12 +42,10 @@ func TestListVPNConnections(t *testing.T) {
 	}))
 	defer server.Close()
 
-	// Create client with mock SID
-	client := &Client{
-		baseURL: server.URL,
-		sid:     "test-sid",
-		httpClient: http.DefaultClient,
-	}
+	// Create client with mock getSID function
+	client := NewClient(server.URL, func() (string, error) {
+		return "test-sid", nil
+	})
 
 	// Call ListVPNConnections
 	connections, err := client.ListVPNConnections()
@@ -85,11 +83,9 @@ func TestListVPNConnectionsEmpty(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := &Client{
-		baseURL: server.URL,
-		sid:     "test-sid",
-		httpClient: http.DefaultClient,
-	}
+	client := NewClient(server.URL, func() (string, error) {
+		return "test-sid", nil
+	})
 
 	connections, err := client.ListVPNConnections()
 	if err != nil {
@@ -108,11 +104,9 @@ func TestListVPNConnectionsError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := &Client{
-		baseURL: server.URL,
-		sid:     "test-sid",
-		httpClient: http.DefaultClient,
-	}
+	client := NewClient(server.URL, func() (string, error) {
+		return "test-sid", nil
+	})
 
 	_, err := client.ListVPNConnections()
 	if err == nil {

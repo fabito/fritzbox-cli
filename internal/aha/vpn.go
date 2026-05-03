@@ -18,12 +18,18 @@ type VPNConnection struct {
 
 // ListVPNConnections lists all VPN connections
 func (c *Client) ListVPNConnections() ([]VPNConnection, error) {
+	// Get SID
+	sid, err := c.getSID()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get SID: %w", err)
+	}
+
 	url := c.baseURL + "/api/v0/generic/vpn"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	req.Header.Set("Authorization", "AVM-SID "+c.sid)
+	req.Header.Set("Authorization", "AVM-SID "+sid)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

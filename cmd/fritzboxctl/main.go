@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/fabito/fritzboxctl/internal/aha"
 	"github.com/fabito/fritzboxctl/internal/auth"
 	"github.com/fabito/fritzboxctl/internal/config"
 	"github.com/fabito/fritzboxctl/internal/soap"
@@ -26,6 +27,7 @@ var (
 
 	// Internal clients
 	soapClient *soap.Client
+	ahaClient  *aha.Client
 	authObj    *auth.Auth
 	cfg        *config.Config
 )
@@ -65,6 +67,7 @@ Fritz!Box devices via TR-064 (SOAP/UPnP) and AHA-HTTP protocols.`,
 	rootCmd.AddCommand(newNetworkCommand())
 	rootCmd.AddCommand(newTAMCommand())
 	rootCmd.AddCommand(newVPNCommand())
+	rootCmd.AddCommand(newLEDCommand())
 
 	return rootCmd
 }
@@ -145,6 +148,16 @@ func initializeClients(cmd *cobra.Command) error {
 	soapCallFunc := soapClient.GetSoapCallFunc()
 	authObj.SetSIDManager(auth.NewSIDManager(soapCallFunc))
 
+	// Create AHA client (use base URL without SOAP port)
+	ahaBaseURL := cfg.RouterURI
+	if !strings.HasPrefix(ahaBaseURL, "http://") && !strings.HasPrefix(ahaBaseURL, "https://") {
+		ahaBaseURL = fmt.Sprintf("http://%s", ahaBaseURL)
+	}
+	ahaClient = aha.NewClient(ahaBaseURL, func() (string, error) {
+		return authObj.SIDManager.GetSID()
+	})
+	debugCheckSID()
+
 	// Discover services
 	if err := soapClient.Discover(); err != nil {
 		// Non-fatal, some services may not be available
@@ -176,4 +189,18 @@ func hasPort(url string) bool {
 		return true
 	}
 	return false
+}
+
+// Debug: check SID after initialization
+func debugCheckSID() {
+	if authObj == nil {
+		slog.Debug("debugCheckSID: authObj is nil")
+		return
+	}
+	if authObj.SIDManager == nil {
+		slog.Debug("debugCheckSID: SIDManager is nil")
+		return
+	}
+	sid, err := authObj.SIDManager.GetSID()
+	slog.Debug("debugCheckSID: SIDManager.GetSID()", "sid", sid, "error", err)
 }

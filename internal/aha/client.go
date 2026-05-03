@@ -8,13 +8,14 @@ type Client struct {
 	baseURL    string
 	sid        string
 	httpClient *http.Client
+	getSID     func() (string, error)
 }
 
 // NewClient creates a new AHA client
-func NewClient(baseURL string, sid string) *Client {
+func NewClient(baseURL string, getSID func() (string, error)) *Client {
 	return &Client{
 		baseURL:    baseURL,
-		sid:        sid,
 		httpClient: http.DefaultClient,
+		getSID:     getSID,
 	}
 }
