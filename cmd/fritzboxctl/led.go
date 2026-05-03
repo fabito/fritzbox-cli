@@ -15,6 +15,7 @@ func newLEDCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(newLEDStatusCommand())
+	cmd.AddCommand(newLEDSetCommand())
 
 	return cmd
 }
@@ -59,6 +60,51 @@ func runLEDStatus(cmd *cobra.Command, args []string) error {
 		} else {
 			fmt.Println("Dimming:        Not supported")
 		}
+	}
+
+	return nil
+}
+
+// newLEDSetCommand creates the LED set command
+func newLEDSetCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "set [on|off]",
+		Short: "Set LED state (on/off)",
+		Long:  `Enables or disables the Fritz!Box LEDs.`,
+		Args:  cobra.ExactArgs(1),
+		RunE:  runLEDSet,
+	}
+}
+
+// runLEDSet executes the LED set command
+func runLEDSet(cmd *cobra.Command, args []string) error {
+	// Parse the argument
+	var enabled bool
+	switch args[0] {
+	case "on":
+		enabled = true
+	case "off":
+		enabled = false
+	default:
+		return fmt.Errorf("invalid argument: %s (use 'on' or 'off')", args[0])
+	}
+
+	// Call AHA client to set LED state (thin layer - only CLI handling here)
+	err := ahaClient.SetLEDEnabled(enabled)
+	if err != nil {
+		return fmt.Errorf("failed to set LED state: %w", err)
+	}
+
+	// Output result (formatting only - no business logic)
+	switch cfg.OutputFormat {
+	case "json":
+		fmt.Printf(`{"enabled": %v}`+"\n", enabled)
+	default:
+		state := "OFF"
+		if enabled {
+			state = "ON"
+		}
+		fmt.Printf("LEDs switched %s\n", state)
 	}
 
 	return nil

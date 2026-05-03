@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"net/url"
 )
 
@@ -57,4 +58,47 @@ func (c *Client) GetLEDStatus() (*LEDStatus, error) {
 	}
 
 	return &status, nil
+}
+
+// SetLEDEnabled sets the LED state (on/off)
+// enabled: true = ON (led_display=0), false = OFF (led_display=2)
+func (c *Client) SetLEDEnabled(enabled bool) error {
+	// Get SID
+	slog.Debug("SetLEDEnabled: calling getSID()")
+	sid, err := c.getSID()
+	if err != nil {
+		return fmt.Errorf("failed to get SID: %w", err)
+	}
+	slog.Debug("SetLEDEnabled: got SID", "sid", sid)
+
+	// Determine led_display value
+	// From FritzBoxShell: led_display=0 -> ON, led_display=2 -> OFF
+	ledDisplay := "0"
+	if !enabled {
+		ledDisplay = "2"
+	}
+
+	// Build URL and POST data
+	ledURL := fmt.Sprintf("%s/data.lua", c.baseURL)
+	formData := url.Values{
+		"sid":        {sid},
+		"page":       {"led"},
+		"led_display": {ledDisplay},
+		"apply":      {""},
+	}
+
+	// Make POST request
+	resp, err := c.httpClient.PostForm(ledURL, formData)
+	if err != nil {
+		return fmt.Errorf("failed to set LED state: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to set LED state: HTTP %d", resp.StatusCode)
+	}
+
+	slog.Debug("SetLEDEnabled: success", "enabled", enabled)
+	return nil
 }
