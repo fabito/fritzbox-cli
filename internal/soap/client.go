@@ -57,6 +57,11 @@ func (c *Client) Call(servicePath, soapAction, soapBody string) (string, error) 
 	}
 	defer resp.Body.Close()
 
+	// Check if we still got 401 after digest auth retry
+	if resp.StatusCode == http.StatusUnauthorized {
+		return "", fmt.Errorf("SOAP request unauthorized (401) even after digest auth retry")
+	}
+
 	// Read response
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

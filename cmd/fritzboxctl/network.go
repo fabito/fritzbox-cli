@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
+
+	"github.com/fabito/fritzboxctl/internal/soap/services"
 
 	"github.com/spf13/cobra"
 )
@@ -28,21 +31,63 @@ func newNetworkWANCommand() *cobra.Command {
 		Short: "WAN-related commands",
 	}
 
-	cmd.AddCommand(&cobra.Command{
-		Use:  "status",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return fmt.Errorf("WAN status command not yet implemented")
-		},
-	})
+	cmd.AddCommand(newNetworkWANStatusCommand())
+	cmd.AddCommand(newNetworkWANReconnectCommand())
 
-	cmd.AddCommand(&cobra.Command{
+	return cmd
+}
+
+// newNetworkWANStatusCommand creates the WAN status command
+func newNetworkWANStatusCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "status",
+		Short: "Get WAN connection status",
+		Long:  `Retrieves WAN (internet) connection status such as connection state, external IP, uptime, etc.`,
+		RunE:  runNetworkWANStatus,
+	}
+}
+
+// runNetworkWANStatus executes the WAN status command
+func runNetworkWANStatus(cmd *cobra.Command, args []string) error {
+	// Call the service layer (thin CLI - just delegates)
+	status, err := services.GetWANStatus(soapClient)
+	if err != nil {
+		return fmt.Errorf("failed to get WAN status: %w", err)
+	}
+
+	// Display the result (format output in cmd/)
+	slog.Debug("WAN status retrieved", "status", status.NewConnectionStatus)
+
+	switch cfg.OutputFormat {
+	case "json":
+		fmt.Printf(`{"connection_status": "%s", "external_ip": "%s", "uptime": "%s"}\n`,
+			status.NewConnectionStatus, status.NewExternalIPAddress, status.NewUptime)
+	default:
+		fmt.Println("WAN Connection Status")
+		fmt.Println("=============================")
+		fmt.Printf("Connection:      %s\n", status.NewConnectionStatus)
+		fmt.Printf("External IP:     %s\n", status.NewExternalIPAddress)
+		fmt.Printf("Uptime:          %s seconds\n", status.NewUptime)
+		if status.NewLastConnectionError != "" {
+			fmt.Printf("Last Error:      %s\n", status.NewLastConnectionError)
+		}
+		if status.NewDNSServers != "" {
+			fmt.Printf("DNS Servers:     %s\n", status.NewDNSServers)
+		}
+	}
+
+	return nil
+}
+
+// newNetworkWANReconnectCommand creates the WAN reconnect command
+func newNetworkWANReconnectCommand() *cobra.Command {
+	return &cobra.Command{
 		Use:  "reconnect",
+		Short: "Reconnect WAN (redial)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("WAN reconnect command not yet implemented")
 		},
-	})
-
-	return cmd
+	}
 }
 
 // newNetworkDSLCommand creates the DSL command
