@@ -55,18 +55,30 @@ func runNetworkWANStatus(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get WAN status: %w", err)
 	}
 
+	// Also get external IP (separate call)
+	extIPResp, err := services.GetExternalIPAddress(soapClient)
+	if err != nil {
+		slog.Warn("Failed to get external IP", "error", err)
+	}
+
 	// Display the result (format output in cmd/)
 	slog.Debug("WAN status retrieved", "status", status.NewConnectionStatus)
 
 	switch cfg.OutputFormat {
 	case "json":
+		extIP := ""
+		if extIPResp != nil {
+			extIP = extIPResp.NewExternalIPAddress
+		}
 		fmt.Printf(`{"connection_status": "%s", "external_ip": "%s", "uptime": "%s"}\n`,
-			status.NewConnectionStatus, status.NewExternalIPAddress, status.NewUptime)
+			status.NewConnectionStatus, extIP, status.NewUptime)
 	default:
 		fmt.Println("WAN Connection Status")
 		fmt.Println("=============================")
 		fmt.Printf("Connection:      %s\n", status.NewConnectionStatus)
-		fmt.Printf("External IP:     %s\n", status.NewExternalIPAddress)
+		if extIPResp != nil && extIPResp.NewExternalIPAddress != "" {
+			fmt.Printf("External IP:     %s\n", extIPResp.NewExternalIPAddress)
+		}
 		fmt.Printf("Uptime:          %s seconds\n", status.NewUptime)
 		if status.NewLastConnectionError != "" {
 			fmt.Printf("Last Error:      %s\n", status.NewLastConnectionError)
