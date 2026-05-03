@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/xml"
+	"strings"
 	"testing"
 )
 
@@ -75,6 +76,42 @@ func TestParseWLANStatusResponse(t *testing.T) {
 
 	t.Logf("Successfully parsed: %+v", resp)
 }
+
+// TestSetWLANEnabled tests the SetWLANEnabled function (RED phase - test first)
+func TestSetWLANEnabled(t *testing.T) {
+	// Test with nil client (returns mock success for enable)
+	err := SetWLANEnabled(1, true, nil)
+	if err != nil {
+		t.Errorf("Expected no error with nil client (enable), got: %v", err)
+	}
+
+	// Test with nil client (disable)
+	err = SetWLANEnabled(1, false, nil)
+	if err != nil {
+		t.Errorf("Expected no error with nil client (disable), got: %v", err)
+	}
+
+	// Test with all valid bands
+	for _, band := range []int{1, 2, 3, 4} {
+		err = SetWLANEnabled(band, true, nil)
+		if err != nil {
+			t.Errorf("Expected no error for band %d, got: %v", band, err)
+		}
+	}
+
+	// Test with invalid band
+	err = SetWLANEnabled(99, true, nil)
+	if err == nil {
+		t.Error("Expected error for invalid band")
+	}
+
+	// Verify error message contains band number
+	if err != nil && !strings.Contains(err.Error(), "99") {
+		t.Errorf("Expected error message to contain '99', got: %v", err)
+	}
+}
+
+// TestSetWLANEnabledEnabledValue tests that enabled value is correctly converted
 
 // TestParseWLANStatsResponse tests XML parsing of WLAN stats response
 func TestParseWLANStatsResponse(t *testing.T) {

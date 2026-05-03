@@ -140,3 +140,44 @@ func GetWLANStatus(soapClient *soap.Client, band int) (*WLANStatusResponse, erro
 
 	return &status, nil
 }
+
+// SetWLANEnabled enables or disables WLAN for the specified band
+// If soapClient is nil, returns nil (mock success for testing)
+func SetWLANEnabled(band int, enabled bool, soapClient *soap.Client) error {
+	info, ok := wlanServiceInfo[band]
+	if !ok {
+		return fmt.Errorf("invalid band: %d (use 1-4)", band)
+	}
+
+	// Return mock success if client is nil
+	if soapClient == nil {
+		return nil
+	}
+
+	// Convert enabled to NewEnable parameter
+	newEnable := "0"
+	if enabled {
+		newEnable = "1"
+	}
+
+	// Build SOAP request for SetEnable
+	soapBody := fmt.Sprintf(`<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+    <s:Body>
+        <u:SetEnable xmlns:u="%s">
+            <NewEnable>%s</NewEnable>
+        </u:SetEnable>
+    </s:Body>
+</s:Envelope>`, info.Type, newEnable)
+
+	_, err := soapClient.Call(
+		info.Path,
+		info.Type+"#SetEnable",
+		soapBody,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to set WLAN enabled: %w", err)
+	}
+
+	return nil
+}

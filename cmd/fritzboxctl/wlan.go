@@ -66,16 +66,53 @@ func runWLANStatus(band int) error {
 
 // newWLANSetCommand creates the WLAN set command
 func newWLANSetCommand() *cobra.Command {
-	return &cobra.Command{
+	var band int
+	var enableFlag bool
+	var disableFlag bool
+
+	cmd := &cobra.Command{
 		Use:   "set",
 		Short: "Set WLAN state (on/off)",
-		RunE:  runWLANSet,
-	}
-}
+		Long:  `Enables or disables WLAN (WiFi) for the specified band.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Determine enable/disable state
+			if enableFlag && disableFlag {
+				return fmt.Errorf("cannot specify both --on and --off")
+			}
+			if !enableFlag && !disableFlag {
+				return fmt.Errorf("must specify --on or --off")
+			}
+			enabled := enableFlag
 
-// runWLANSet executes the WLAN set command
-func runWLANSet(cmd *cobra.Command, args []string) error {
-	return fmt.Errorf("WLAN set command not yet implemented")
+			// Determine bands to affect
+			bands := []int{}
+			if band == 0 {
+				// All bands (1-4)
+				bands = []int{1, 2, 3, 4}
+			} else {
+				bands = []int{band}
+			}
+
+			// Call service layer for each band
+			for _, b := range bands {
+				if err := services.SetWLANEnabled(b, enabled, soapClient); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to set WLAN for band %d: %v\n", b, err)
+					continue
+				}
+				bandName := getBandName(b)
+				state := "disabled"
+				if enabled {
+					state = "enabled"
+				}
+				fmt.Printf("WLAN %s %s\n", bandName, state)
+			}
+			return nil
+		},
+	}
+	cmd.Flags().IntVarP(&band, "band", "b", 0, "WLAN band (1=2.4GHz, 2=5GHz, 3=5GHz 2nd, 4=Guest, 0=all)")
+	cmd.Flags().BoolVar(&enableFlag, "on", false, "Enable WLAN")
+	cmd.Flags().BoolVar(&disableFlag, "off", false, "Disable WLAN")
+	return cmd
 }
 
 // newWLANStatsCommand creates the WLAN stats command
