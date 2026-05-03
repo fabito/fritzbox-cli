@@ -17,7 +17,32 @@ func newVPNCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(newVPNListCommand())
+	cmd.AddCommand(newVPNSetCommand())
 
+	return cmd
+}
+
+// newVPNSetCommand creates the VPN set command
+func newVPNSetCommand() *cobra.Command {
+	var enabled bool
+	cmd := &cobra.Command{
+		Use:   "set",
+		Short: "Enable or disable a VPN connection",
+		Long:  `Enables or disables a VPN connection by name.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) < 1 {
+				return fmt.Errorf("please specify a VPN connection name")
+			}
+			name := args[0]
+			return runVPNSet(name, enabled)
+		},
+	}
+	cmd.Flags().BoolVar(&enabled, "on", false, "Enable the VPN connection")
+	cmd.Flags().BoolVar(&enabled, "off", false, "Disable the VPN connection")
+	// Custom help to show on/off options
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		fmt.Fprintf(cmd.OutOrStdout(), "Usage:\n  %s [flags] <name>\n\nFlags:\n  --on\tEnable the VPN connection\n  --off\tDisable the VPN connection\n", cmd.CommandPath())
+	})
 	return cmd
 }
 
@@ -69,8 +94,41 @@ func runVPNList(cmd *cobra.Command, args []string) error {
 			if conn.Enabled {
 				enabled = "Yes"
 			}
-			fmt.Printf("%-20s %-10s %-15s %-12s\n", conn.Name, conn.Type, conn.Status, enabled)
+		fmt.Printf("%-20s %-10s %-15s %-12s\n", conn.Name, conn.Type, conn.Status, enabled)
 		}
+	}
+
+	return nil
+}
+
+// runVPNSet executes the VPN set command
+func runVPNSet(name string, enabled bool) error {
+	// Create AHA client with getSID function
+	routerURI := cfg.RouterURI
+	if !strings.HasPrefix(routerURI, "http://") && !strings.HasPrefix(routerURI, "https://") {
+		routerURI = "http://" + routerURI
+	}
+
+	client := aha.NewClient(routerURI, func() (string, error) {
+		return authObj.SIDManager.GetSID()
+	})
+
+	// Call SetVPNEnabled
+	err := client.SetVPNEnabled(name, enabled)
+	if err != nil {
+		return fmt.Errorf("failed to set VPN: %w", err)
+	}
+
+	// Output result
+	switch cfg.OutputFormat {
+	case "json":
+		fmt.Printf(`{"name": "%s", "enabled": %v}\n`, name, enabled)
+	default:
+		state := "disabled"
+		if enabled {
+			state = "enabled"
+		}
+		fmt.Printf("VPN connection '%s' %s successfully.\n", name, state)
 	}
 
 	return nil
