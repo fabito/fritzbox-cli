@@ -1,0 +1,62 @@
+package services
+
+import (
+	"encoding/xml"
+	"fmt"
+
+	"github.com/fabito/fritzboxctl/internal/soap"
+)
+
+// GetInfoResponse represents the SOAP response for GetInfo
+// The XML tags flatten the nested SOAP structure using path syntax
+// Body > GetInfoResponse > FieldName
+type GetInfoResponse struct {
+	XMLName              xml.Name `xml:"Envelope"`
+	NewManufacturerName  string   `xml:"Body>GetInfoResponse>NewManufacturerName"`
+	NewManufacturerOUI   string   `xml:"Body>GetInfoResponse>NewManufacturerOUI"`
+	NewModelName         string   `xml:"Body>GetInfoResponse>NewModelName"`
+	NewModelNumber       string   `xml:"Body>GetInfoResponse>NewModelNumber"`
+	NewSerialNumber      string   `xml:"Body>GetInfoResponse>NewSerialNumber"`
+	NewDescription       string   `xml:"Body>GetInfoResponse>NewDescription"`
+	NewProductClass      string   `xml:"Body>GetInfoResponse>NewProductClass"`
+	NewSoftwareVersion   string   `xml:"Body>GetInfoResponse>NewSoftwareVersion"`
+	NewHardwareVersion   string   `xml:"Body>GetInfoResponse>NewHardwareVersion"`
+}
+
+// GetDeviceInfo retrieves device information from Fritz!Box
+// If soapClient is nil, returns mock data for testing
+func GetDeviceInfo(soapClient *soap.Client) (*GetInfoResponse, error) {
+	if soapClient == nil {
+		// Return mock data for testing
+		return &GetInfoResponse{
+			NewModelName: "FRITZ!Box 7530",
+		}, nil
+	}
+
+	// Build SOAP request
+	soapBody := `<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+    <s:Body>
+        <u:GetInfo xmlns:u="urn:dslforum-org:service:DeviceInfo:1">
+        </u:GetInfo>
+    </s:Body>
+</s:Envelope>`
+
+	resp, err := soapClient.Call(
+		"/upnp/control/deviceinfo",
+		"urn:dslforum-org:service:DeviceInfo:1#GetInfo",
+		soapBody,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get device info: %w", err)
+	}
+
+	// Clean and parse response using shared function from soap package
+	resp = soap.CleanSoapResponse(resp)
+	var info GetInfoResponse
+	if err := xml.Unmarshal([]byte(resp), &info); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &info, nil
+}

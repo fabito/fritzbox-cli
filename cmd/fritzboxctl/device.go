@@ -3,16 +3,16 @@ package main
 import (
 	"encoding/xml"
 	"fmt"
-	"log/slog"
 	"os"
 	"strings"
 
+	"github.com/fabito/fritzboxctl/internal/soap"
 	"github.com/fabito/fritzboxctl/internal/soap/services"
 
 	"github.com/spf13/cobra"
 )
 
-// HostEntry represents a device on the network
+// HostEntry represents a device on the network (for display only)
 type HostEntry struct {
 	HostName      string
 	IPAddress     string
@@ -74,99 +74,33 @@ func newDeviceInfoCommand() *cobra.Command {
 
 // runDeviceInfo executes the device info command
 func runDeviceInfo(cmd *cobra.Command, args []string) error {
-	// SOAP call to get device info
-	soapBody := `<?xml version="1.0" encoding="utf-8"?>
-<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
-    <s:Body>
-        <u:GetInfo xmlns:u="urn:dslforum-org:service:DeviceInfo:1">
-        </u:GetInfo>
-    </s:Body>
-</s:Envelope>`
-
-	resp, err := soapClient.Call(
-		"/upnp/control/deviceinfo",
-		"urn:dslforum-org:service:DeviceInfo:1#GetInfo",
-		soapBody,
-	)
+	// Call the service layer to get device info
+	info, err := services.GetDeviceInfo(soapClient)
 	if err != nil {
 		return fmt.Errorf("failed to get device info: %w", err)
-	}
-
-	// Parse and display the response
-	return displayDeviceInfo(resp)
-}
-
-// GetInfoResponse represents the parsed device info from GetInfo SOAP call
-type GetInfoResponse struct {
-	NewManufacturerName    string `xml:"NewManufacturerName"`
-	NewManufacturerOUI     string `xml:"NewManufacturerOUI"`
-	NewModelName           string `xml:"NewModelName"`
-	NewModelNumber         string `xml:"NewModelNumber"`
-	NewSerialNumber        string `xml:"NewSerialNumber"`
-	NewDescription         string `xml:"NewDescription"`
-	NewProductClass        string `xml:"NewProductClass"`
-	NewSoftwareVersion     string `xml:"NewSoftwareVersion"`
-	NewHardwareVersion     string `xml:"NewHardwareVersion"`
-}
-
-// Body represents the SOAP Body element
-type Body struct {
-	GetInfoResponse GetInfoResponse `xml:"GetInfoResponse"`
-}
-
-// Envelope represents the SOAP Envelope
-type Envelope struct {
-	XMLName xml.Name `xml:"Envelope"`
-	Body    Body     `xml:"Body"`
-}
-
-// displayDeviceInfo parses and displays device info
-func displayDeviceInfo(resp string) error {
-	// Clean up response for XML parsing - remove namespace prefixes
-	resp = cleanSoapResponse(resp)
-
-	slog.Debug("displayDeviceInfo: cleaned response", "response", resp[:min(len(resp), 500)])
-	var info Envelope
-	decoder := xml.NewDecoder(strings.NewReader(resp))
-	if err := decoder.Decode(&info); err != nil {
-		// Try alternate parsing
-		return displayDeviceInfoRaw(resp)
 	}
 
 	// Display based on output format
 	switch cfg.OutputFormat {
 	case "json":
-		// JSON output (simplified for now)
+		// JSON output
 		fmt.Printf(`{"model": "%s", "serial": "%s", "firmware": "%s"}\n`,
-			info.Body.GetInfoResponse.NewModelName,
-			info.Body.GetInfoResponse.NewSerialNumber,
-			info.Body.GetInfoResponse.NewSoftwareVersion)
+			info.NewModelName,
+			info.NewSerialNumber,
+			info.NewSoftwareVersion)
 	default:
 		// Text output
 		fmt.Println("Fritz!Box Device Information")
 		fmt.Println("============================")
-		fmt.Printf("Model:          %s\n", info.Body.GetInfoResponse.NewModelName)
-		fmt.Printf("Model Number:    %s\n", info.Body.GetInfoResponse.NewModelNumber)
-		fmt.Printf("Serial Number:   %s\n", info.Body.GetInfoResponse.NewSerialNumber)
-		fmt.Printf("Firmware:        %s\n", info.Body.GetInfoResponse.NewSoftwareVersion)
-		fmt.Printf("Hardware:         %s\n", info.Body.GetInfoResponse.NewHardwareVersion)
-		fmt.Printf("Manufacturer:     %s\n", info.Body.GetInfoResponse.NewManufacturerName)
-		fmt.Printf("Description:      %s\n", info.Body.GetInfoResponse.NewDescription)
+		fmt.Printf("Model:          %s\n", info.NewModelName)
+		fmt.Printf("Model Number:    %s\n", info.NewModelNumber)
+		fmt.Printf("Serial Number:   %s\n", info.NewSerialNumber)
+		fmt.Printf("Firmware:        %s\n", info.NewSoftwareVersion)
+		fmt.Printf("Hardware:        %s\n", info.NewHardwareVersion)
+		fmt.Printf("Manufacturer:    %s\n", info.NewManufacturerName)
+		fmt.Printf("Description:     %s\n", info.NewDescription)
 	}
 
-	return nil
-}
-
-// displayDeviceInfoRaw displays raw XML for debugging
-func displayDeviceInfoRaw(resp string) error {
-	fmt.Println("Device Information (raw):")
-	// Simple string parsing as fallback
-	lines := strings.Split(resp, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "New") || strings.Contains(line, "Model") || strings.Contains(line, "Serial") {
-			fmt.Println(strings.TrimSpace(line))
-		}
-	}
 	return nil
 }
 
@@ -200,9 +134,9 @@ func runDeviceList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get host count: %w", err)
 	}
 
-	// Parse number of hosts
-	numResponse := services.HostNumberResponse{}
-	resp = cleanSoapResponse(resp)
+	// Parse number of hosts using shared CleanSoapResponse
+	resp = soap.CleanSoapResponse(resp)
+	var numResponse services.HostNumberResponse
 	if err := xml.Unmarshal([]byte(resp), &numResponse); err != nil {
 		return fmt.Errorf("failed to parse host count: %w", err)
 	}
@@ -238,15 +172,15 @@ func runDeviceList(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		// Parse host entry
+		// Parse host entry using shared CleanSoapResponse
+		resp = soap.CleanSoapResponse(resp)
 		var hostResp services.HostListResponse
-		resp = cleanSoapResponse(resp)
 		if err := xml.Unmarshal([]byte(resp), &hostResp); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to parse host %d: %v\n", i, err)
 			continue
 		}
 
-		// Convert to HostEntry
+		// Convert to HostEntry for display
 		active := hostResp.NewActive == "1"
 		host := HostEntry{
 			HostName:      hostResp.NewHostName,

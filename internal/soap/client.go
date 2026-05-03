@@ -172,6 +172,22 @@ func (c *Client) GetSoapCallFunc() func(service, action, body string) (string, e
 	}
 }
 
+// CleanSoapResponse removes namespace prefixes and fixes XML for parsing
+// This eliminates duplication from cmd/fritzboxctl/device.go and wlan.go
+func CleanSoapResponse(resp string) string {
+	resp = strings.ReplaceAll(resp, ` encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"`, "")
+	resp = strings.ReplaceAll(resp, " >", ">")
+	resp = strings.ReplaceAll(resp, ` xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"`, "")
+	resp = strings.ReplaceAll(resp, ` xmlns:u="urn:dslforum-org:service:DeviceInfo:1"`, "")
+	resp = strings.ReplaceAll(resp, ` xmlns:u="urn:dslforum-org:service:WLANConfiguration:1"`, "")
+	resp = strings.ReplaceAll(resp, ` xmlns:u="urn:dslforum-org:service:WLANConfiguration:2"`, "")
+	resp = strings.ReplaceAll(resp, ` xmlns:u="urn:dslforum-org:service:WLANConfiguration:3"`, "")
+	resp = strings.ReplaceAll(resp, ` xmlns:u="urn:dslforum-org:service:WLANConfiguration:4"`, "")
+	resp = strings.ReplaceAll(resp, "s:", "")
+	resp = strings.ReplaceAll(resp, "u:", "")
+	return resp
+}
+
 // Helper to truncate strings
 func truncateString(s string, maxLen int) string {
 	if len(s) <= maxLen {
