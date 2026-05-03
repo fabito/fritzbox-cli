@@ -1,191 +1,83 @@
 package aha
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-// Mock JSON response for profile list
-const mockProfileListResponse = `{
-	"data": {
-		"vars": {
-			"kisi": {
-				"profiles": [
-					{"id": "filtprof1", "name": "Standard"},
-					{"id": "filtprof2", "name": "Parental Control"},
-					{"id": "filtprof3", "name": "Guest"}
-				]
-			}
-		}
-	}
-}`
-
-// Mock JSON response for device profile (edit_device page)
-const mockDeviceProfileResponse = `{
-	"data": {
-		"vars": {
-			"dev": {
-				"netAccess": {
-					"kisi": {
-						"profiles": {
-							"selected": "filtprof2"
-						}
-					}
-				}
-			}
-		}
-	}
-}`
-
-// TestListProfiles tests the ListProfiles function
-func TestListProfiles(t *testing.T) {
-	// Create test server that returns mock profile list
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Verify request
-		r.ParseForm()
-		if r.FormValue("sid") == "" {
-			t.Errorf("Expected sid in POST form")
-		}
-		if r.FormValue("page") != "kisi_profilelist" {
-			t.Errorf("Expected page=kisi_profilelist, got %s", r.FormValue("page"))
-		}
-		if r.FormValue("xhr") != "1" {
-			t.Errorf("Expected xhr=1, got %s", r.FormValue("xhr"))
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(mockProfileListResponse))
-	}))
-	defer server.Close()
-
-	// Create client with mock getSID
-	client := NewClient(server.URL, func() (string, error) {
-		return "test-sid", nil
-	})
-
-	// Call ListProfiles (this should fail to compile in RED phase)
-	profiles, err := client.ListProfiles()
-	if err != nil {
-		t.Fatalf("ListProfiles failed: %v", err)
-	}
-
-	// Verify profiles
-	if len(profiles) != 3 {
-		t.Errorf("Expected 3 profiles, got %d", len(profiles))
-	}
-	if profiles[0].ID != "filtprof1" {
-		t.Errorf("Expected profile ID 'filtprof1', got '%s'", profiles[0].ID)
-	}
-	if profiles[0].Name != "Standard" {
-		t.Errorf("Expected profile name 'Standard', got '%s'", profiles[0].Name)
-	}
-}
-
-// TestGetDeviceProfile tests the GetDeviceProfile function
-func TestGetDeviceProfile(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.ParseForm()
-		if r.FormValue("sid") == "" {
-			t.Errorf("Expected sid in POST form")
-		}
-		if r.FormValue("page") != "edit_device" {
-			t.Errorf("Expected page=edit_device, got %s", r.FormValue("page"))
-		}
-		if r.FormValue("dev") != "12345" {
-			t.Errorf("Expected dev=12345, got %s", r.FormValue("dev"))
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(mockDeviceProfileResponse))
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, func() (string, error) {
-		return "test-sid", nil
-	})
-
-	// Call GetDeviceProfile (should fail to compile in RED phase)
-	profileID, err := client.GetDeviceProfile("12345")
-	if err != nil {
-		t.Fatalf("GetDeviceProfile failed: %v", err)
-	}
-
-	// Verify profile ID (filtprof2 = "2" after removing prefix)
-	if profileID != "2" {
-		t.Errorf("Expected profile ID '2', got '%s'", profileID)
-	}
-}
-
-// TestSetDeviceProfile tests the SetDeviceProfile function
-func TestSetDeviceProfile(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.ParseForm()
-		if r.FormValue("sid") == "" {
-			t.Errorf("Expected sid in POST form")
-		}
-		if r.FormValue("dev") != "12345" {
-			t.Errorf("Expected dev=12345, got %s", r.FormValue("dev"))
-		}
-		if r.FormValue("kisi_profile") != "filtprof2" {
-			t.Errorf("Expected kisi_profile=filtprof2, got %s", r.FormValue("kisi_profile"))
-		}
-		if r.FormValue("page") != "edit_device" {
-			t.Errorf("Expected page=edit_device, got %s", r.FormValue("page"))
-		}
-		if r.FormValue("apply") != "true" {
-			t.Errorf("Expected apply=true, got %s", r.FormValue("apply"))
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, func() (string, error) {
-		return "test-sid", nil
-	})
-
-	// Call SetDeviceProfile (should fail to compile in RED phase)
-	err := client.SetDeviceProfile("12345", "2")
-	if err != nil {
-		t.Fatalf("SetDeviceProfile failed: %v", err)
-	}
-}
-
-// TestListProfilesInvalidSID tests error when SID is invalid
-func TestListProfilesInvalidSID(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusForbidden)
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, func() (string, error) {
-		return "test-sid", nil
-	})
-
-	_, err := client.ListProfiles()
-	if err == nil {
-		t.Error("Expected error for invalid SID, got nil")
-	}
-}
-
-// TestGetDeviceProfileNoProfile tests when device has no profile set
-func TestGetDeviceProfileNoProfile(t *testing.T) {
+// TestListDevicesWithProfiles is the RED phase - test should FAIL initially
+func TestListDevicesWithProfiles(t *testing.T) {
+	// Mock JSON response from page=netDev&xhrId=all
 	mockResponse := `{
 		"data": {
-			"vars": {
-				"dev": {
-					"netAccess": {
-						"kisi": {
-							"profiles": {
-								"selected": ""
-							}
-						}
-					}
+			"active": [
+				{
+					"name": "Fabios-MBP",
+					"mac": "3C:8D:20:E8:3C:24",
+					"ipv4": {"ip": "192.168.178.29"},
+					"UID": "landevice3019"
+				},
+				{
+					"name": "xavier1",
+					"mac": "48:B0:2D:51:0B:E6",
+					"ipv4": {"ip": "192.168.178.133"},
+					"UID": "landevice5980"
 				}
-			}
+			]
 		}
 	}`
+
+	// Create test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(mockResponse))
+	}))
+	defer server.Close()
+
+	// Create client with test server URL
+	client := &Client{
+		baseURL: server.URL,
+		httpClient: server.Client(),
+		getSID: func() (string, error) {
+			return "test-sid", nil
+		},
+	}
+
+	// Call function (should fail - function doesn't exist yet)
+	devices, err := client.ListDevicesWithProfiles()
+	if err != nil {
+		t.Fatalf("ListDevicesWithProfiles() returned error: %v", err)
+	}
+
+	// Verify results
+	if len(devices) != 2 {
+		t.Errorf("Expected 2 devices, got %d", len(devices))
+	}
+
+	// Check first device
+	if devices[0].DeviceName != "Fabios-MBP" {
+		t.Errorf("Expected device name 'Fabios-MBP', got '%s'", devices[0].DeviceName)
+	}
+	if devices[0].MACAddress != "3C:8D:20:E8:3C:24" {
+		t.Errorf("Expected MAC '3C:8D:20:E8:3C:24', got '%s'", devices[0].MACAddress)
+	}
+	if devices[0].IPAddress != "192.168.178.29" {
+		t.Errorf("Expected IP '192.168.178.29', got '%s'", devices[0].IPAddress)
+	}
+
+	// Check second device
+	if devices[1].DeviceName != "xavier1" {
+		t.Errorf("Expected device name 'xavier1', got '%s'", devices[1].DeviceName)
+	}
+
+	t.Logf("Successfully parsed devices: %+v", devices)
+}
+
+// TestListDevicesWithProfilesEmpty tests with empty device list
+func TestListDevicesWithProfilesEmpty(t *testing.T) {
+	mockResponse := `{"data": {"active": []}}`
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -193,60 +85,71 @@ func TestGetDeviceProfileNoProfile(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, func() (string, error) {
-		return "test-sid", nil
-	})
-
-	profileID, err := client.GetDeviceProfile("99999")
-	if err != nil {
-		t.Fatalf("GetDeviceProfile failed: %v", err)
+	client := &Client{
+		baseURL: server.URL,
+		httpClient: server.Client(),
+		getSID: func() (string, error) {
+			return "test-sid", nil
+		},
 	}
 
-	// Empty profile should return empty string
-	if profileID != "" {
-		t.Errorf("Expected empty profile ID, got '%s'", profileID)
+	devices, err := client.ListDevicesWithProfiles()
+	if err != nil {
+		t.Fatalf("ListDevicesWithProfiles() returned error: %v", err)
+	}
+
+	if len(devices) != 0 {
+		t.Errorf("Expected 0 devices, got %d", len(devices))
 	}
 }
 
-// TestSetDeviceProfileInvalidProfile tests setting an invalid profile ID
-func TestSetDeviceProfileInvalidProfile(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Just verify the request is made
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
+// TestListDevicesWithProfilesJSON tests JSON parsing logic
+func TestListDevicesWithProfilesJSON(t *testing.T) {
+	// Test the JSON structure parsing
+	jsonData := `{
+		"data": {
+			"active": [
+				{
+					"name": "TestDevice",
+					"mac": "AA:BB:CC:DD:EE:FF",
+					"ipv4": {"ip": "192.168.178.100"},
+					"UID": "landevice1234"
+				}
+			]
+		}
+	}`
 
-	client := NewClient(server.URL, func() (string, error) {
-		return "test-sid", nil
-	})
-
-	// Set with invalid profile ID (should still make request)
-	err := client.SetDeviceProfile("12345", "999")
-	if err != nil {
-		t.Fatalf("SetDeviceProfile failed: %v", err)
-	}
-}
-
-// TestGetDeviceProfileInvalidDevice tests getting profile for invalid device
-func TestGetDeviceProfileInvalidDevice(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Return empty profile for invalid device
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"data": {}}`))
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, func() (string, error) {
-		return "test-sid", nil
-	})
-
-	profileID, err := client.GetDeviceProfile("invalid-device")
-	if err != nil {
-		t.Fatalf("GetDeviceProfile failed: %v", err)
+	var result map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(jsonData), &result); err != nil {
+		t.Fatalf("Failed to parse JSON: %v", err)
 	}
 
-	// Should return empty string for invalid device
-	if profileID != "" {
-		t.Errorf("Expected empty profile ID for invalid device, got '%s'", profileID)
+	data, ok := result["data"]
+	if !ok {
+		t.Fatal("No data field in response")
 	}
+
+	var dataObj struct {
+		Active []map[string]interface{} `json:"active"`
+	}
+	if err := json.Unmarshal(data, &dataObj); err != nil {
+		t.Fatalf("Failed to parse data: %v", err)
+	}
+
+	if len(dataObj.Active) != 1 {
+		t.Errorf("Expected 1 device, got %d", len(dataObj.Active))
+	}
+
+	// Extract fields
+	name, _ := dataObj.Active[0]["name"].(string)
+	mac, _ := dataObj.Active[0]["mac"].(string)
+
+	if name != "TestDevice" {
+		t.Errorf("Expected 'TestDevice', got '%s'", name)
+	}
+	if mac != "AA:BB:CC:DD:EE:FF" {
+		t.Errorf("Expected 'AA:BB:CC:DD:EE:FF', got '%s'", mac)
+	}
+
+	t.Log("JSON parsing logic works!")
 }

@@ -16,8 +16,19 @@ type Profile struct {
 	Name string `json:"name"`
 }
 
-// ListProfiles retrieves all device profiles from Fritz!Box
-func (c *Client) ListProfiles() ([]Profile, error) {
+// DeviceProfile represents a device with its assigned profile
+type DeviceProfile struct {
+	DeviceID   string `json:"device_id"`
+	DeviceName string `json:"name"`
+	MACAddress string `json:"mac"`
+	IPAddress  string `json:"ip"`
+	ProfileID  string `json:"profile_id"`
+	ProfileName string `json:"profile_name"`
+}
+
+// ListDevicesWithProfiles lists all devices with their assigned profiles
+// Uses page=netDev&xhrId=all to get device list with profile info
+func (c *Client) ListDevicesWithProfiles() ([]DeviceProfile, error) {
 	// Get SID
 	sid, err := c.getSID()
 	if err != nil {
@@ -29,8 +40,102 @@ func (c *Client) ListProfiles() ([]Profile, error) {
 	formData := url.Values{
 		"xhr":  {"1"},
 		"sid":  {sid},
+		"page": {"netDev"},
+		"xhrId": {"all"},
+	}
+
+	slog.Debug("ListDevicesWithProfiles: requesting", "url", profileURL, "page", "netDev")
+
+	// Make POST request
+	resp, err := c.httpClient.PostForm(profileURL, formData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get device list: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get device list: HTTP %d", resp.StatusCode)
+	}
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	slog.Debug("ListDevicesWithProfiles: response received", "body", string(body))
+
+	// Parse JSON response
+	var result map[string]json.RawMessage
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
+	}
+
+	// Extract devices from data.active array
+	data, ok := result["data"]
+	if !ok {
+		return nil, fmt.Errorf("no data in response")
+	}
+
+	var dataObj struct {
+		Active []struct {
+			Name  string `json:"name"`
+			MAC   string `json:"mac"`
+			UID   string `json:"UID"`
+			IPv4  struct {
+				IP string `json:"ip"`
+			} `json:"ipv4"`
+			// Profile info may be in different fields
+			ProfileID   string `json:"profile_id"`
+			ProfileName string `json:"profile_name"`
+		} `json:"active"`
+	}
+
+	if err := json.Unmarshal(data, &dataObj); err != nil {
+		slog.Debug("ListDevicesWithProfiles: failed to parse", "error", err)
+		return nil, fmt.Errorf("failed to parse data: %w", err)
+	}
+
+	slog.Debug("ListDevicesWithProfiles: parsed devices", "count", len(dataObj.Active))
+
+	// Convert to DeviceProfile slice
+	devices := make([]DeviceProfile, 0, len(dataObj.Active))
+	for _, d := range dataObj.Active {
+		dp := DeviceProfile{
+			DeviceID:   d.UID,
+			DeviceName: d.Name,
+			MACAddress: d.MAC,
+			IPAddress:  d.IPv4.IP,
+			ProfileID:  d.ProfileID,
+			ProfileName: d.ProfileName,
+		}
+		slog.Debug("ListDevicesWithProfiles: device", "name", d.Name, "mac", d.MAC, "ip", d.IPv4.IP)
+		devices = append(devices, dp)
+	}
+
+	return devices, nil
+}
+
+// ListProfiles retrieves all available device profiles from Fritz!Box
+// Returns profile definitions like "Standard", "Restricted", etc.
+func (c *Client) ListProfiles() ([]Profile, error) {
+	// Get SID
+	sid, err := c.getSID()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get SID: %w", err)
+	}
+
+	// Build URL and POST data
+	// From FritzBoxShell: page=kisi_profilelist
+	profileURL := fmt.Sprintf("%s/data.lua", c.baseURL)
+	formData := url.Values{
+		"xhr":  {"1"},
+		"sid":  {sid},
 		"page": {"kisi_profilelist"},
 	}
+
+	slog.Debug("ListProfiles: requesting", "url", profileURL, "page", "kisi_profilelist")
 
 	// Make POST request
 	resp, err := c.httpClient.PostForm(profileURL, formData)
@@ -52,31 +157,52 @@ func (c *Client) ListProfiles() ([]Profile, error) {
 
 	slog.Debug("ListProfiles: response received", "body", string(body))
 
-	// Parse JSON response
-	var result map[string]json.RawMessage
-	if err := json.Unmarshal(body, &result); err != nil {
+	// Parse JSON response - format from FritzBoxShell getProfileName function
+	// The response is an array of [id, name] pairs or an object with profiles
+	var raw json.RawMessage
+	if err := json.Unmarshal(body, &raw); err != nil {
 		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
-	// Extract profiles from nested structure: data.vars.kisi.profiles
-	data, ok := result["data"]
-	if !ok {
-		return nil, fmt.Errorf("no data in response")
+	// Try to parse as array of [id, name] pairs first
+	var profileArray [][]interface{}
+	if err := json.Unmarshal(raw, &profileArray); err == nil {
+		profiles := make([]Profile, 0, len(profileArray))
+		for _, p := range profileArray {
+			if len(p) >= 2 {
+				id, _ := p[0].(string)
+				name, _ := p[1].(string)
+				profiles = append(profiles, Profile{ID: id, Name: name})
+			}
+		}
+		return profiles, nil
 	}
 
-	var dataObj struct {
-		Vars struct {
-			Kisi struct {
-				Profiles []Profile `json:"profiles"`
-			} `json:"kisi"`
-		} `json:"vars"`
+	// Try to parse as object with profiles field
+	var result map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse response as array or object: %w", err)
 	}
 
-	if err := json.Unmarshal(data, &dataObj); err != nil {
-		return nil, fmt.Errorf("failed to parse data: %w", err)
+	// Try data.profiles structure
+	if data, ok := result["data"]; ok {
+		var dataObj struct {
+			Profiles []Profile `json:"profiles"`
+		}
+		if err := json.Unmarshal(data, &dataObj); err == nil {
+			return dataObj.Profiles, nil
+		}
 	}
 
-	return dataObj.Vars.Kisi.Profiles, nil
+	// Try direct profiles field
+	if profilesRaw, ok := result["profiles"]; ok {
+		var profiles []Profile
+		if err := json.Unmarshal(profilesRaw, &profiles); err == nil {
+			return profiles, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not parse profiles from response")
 }
 
 // GetDeviceProfile retrieves the current profile ID for a device

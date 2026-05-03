@@ -39,22 +39,33 @@ func runDeviceProfilesList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("AHA client not initialized (check router URI, username, and password)")
 	}
 
-	// List profiles
-	profiles, err := ahaClient.ListProfiles()
+	// List devices with their profiles
+	devices, err := ahaClient.ListDevicesWithProfiles()
 	if err != nil {
-		return fmt.Errorf("failed to list profiles: %w", err)
+		return fmt.Errorf("failed to list devices: %w", err)
 	}
 
-	// Display profiles
-	fmt.Println("Device Profiles")
-	fmt.Println("===============")
-	if len(profiles) == 0 {
-		fmt.Println("No profiles found.")
+	// Display devices
+	fmt.Println("Devices with Profiles")
+	fmt.Println("======================")
+	if len(devices) == 0 {
+		fmt.Println("No devices found.")
 	} else {
-		for _, p := range profiles {
-			// Extract numeric ID from "filtprofXXXX"
-			id := strings.TrimPrefix(p.ID, "filtprof")
-			fmt.Printf("ID: %s - %s\n", id, p.Name)
+		// Print header
+		fmt.Printf("%-20s %-17s %-15s %-10s\n", "Device Name", "MAC", "IP", "Profile")
+		fmt.Println(strings.Repeat("-", 65))
+
+		// Print devices
+		for _, d := range devices {
+			name := d.DeviceName
+			if name == "" {
+				name = "(unknown)"
+			}
+			profile := d.ProfileName
+			if profile == "" {
+				profile = "(none)"
+			}
+			fmt.Printf("%-20s %-17s %-15s %-10s\n", name, d.MACAddress, d.IPAddress, profile)
 		}
 	}
 
