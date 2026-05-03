@@ -104,10 +104,54 @@ func newNetworkWANReconnectCommand() *cobra.Command {
 
 // newNetworkDSLCommand creates the DSL command
 func newNetworkDSLCommand() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:  "dsl",
 		Short: "DSL-related commands",
 	}
+
+	cmd.AddCommand(newNetworkDSLStatusCommand())
+
+	return cmd
+}
+
+// newNetworkDSLStatusCommand creates the DSL status command
+func newNetworkDSLStatusCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "status",
+		Short: "Get DSL connection status",
+		Long:  `Retrieves DSL connection status such as line rate, interleave delay, max data rate, etc.`,
+		RunE:  runNetworkDSLStatus,
+	}
+}
+
+// runNetworkDSLStatus executes the DSL status command
+func runNetworkDSLStatus(cmd *cobra.Command, args []string) error {
+	// Call the service layer (thin CLI - just delegates)
+	status, err := services.GetDSLStatus(soapClient)
+	if err != nil {
+		return fmt.Errorf("failed to get DSL status: %w", err)
+	}
+
+	// Display the result (format output in cmd/)
+	switch cfg.OutputFormat {
+	case "json":
+		fmt.Printf(`{"downstream_rate": "%s", "upstream_rate": "%s", "downstream_max": "%s", "upstream_max": "%s"}\n`,
+			status.NewDownstreamCurrRate, status.NewUpstreamCurrRate,
+			status.NewDownstreamMaxRate, status.NewUpstreamMaxRate)
+	default:
+		fmt.Println("DSL Connection Status")
+		fmt.Println("=============================")
+		fmt.Printf("Status:               %s\n", status.NewStatus)
+		fmt.Printf("Data Path:            %s\n", status.NewDataPath)
+		fmt.Printf("Downstream Current:    %s kbps\n", status.NewDownstreamCurrRate)
+		fmt.Printf("Upstream Current:      %s kbps\n", status.NewUpstreamCurrRate)
+		fmt.Printf("Downstream Max:        %s kbps\n", status.NewDownstreamMaxRate)
+		fmt.Printf("Upstream Max:          %s kbps\n", status.NewUpstreamMaxRate)
+		fmt.Printf("Downstream Noise:      %s dB\n", status.NewDownstreamNoiseMargin)
+		fmt.Printf("Upstream Noise:        %s dB\n", status.NewUpstreamNoiseMargin)
+	}
+
+	return nil
 }
 
 // newNetworkLANCommand creates the LAN command
