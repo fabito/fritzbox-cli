@@ -56,6 +56,7 @@ func newDeviceCommand() *cobra.Command {
 
 	cmd.AddCommand(newDeviceInfoCommand())
 	cmd.AddCommand(newDeviceListCommand())
+	cmd.AddCommand(newDeviceProfilesCommand())
 	cmd.AddCommand(newDeviceBlockCommand())
 	cmd.AddCommand(newDeviceUnblockCommand())
 	cmd.AddCommand(newDeviceRebootCommand())
