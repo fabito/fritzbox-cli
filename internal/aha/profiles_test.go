@@ -7,6 +7,68 @@ import (
 	"testing"
 )
 
+// TestListAvailableProfiles is the RED phase - test should FAIL initially
+// This tests the NEW function to list available profile definitions
+func TestListAvailableProfiles(t *testing.T) {
+	// Mock HTML response from page=kidPro&xhrId=all
+	// This is the actual format returned by Fritz!Box 7530
+	mockHTMLResponse := `
+	<td class="name" title="Standard" data-label="Standard"><span>Standard</span></td>
+	<button type="submit" name="edit" value="filtprof1" class="icon edit" title="Edit"></button>
+	<td class="name" title="Guest" data-label="Guest"><span>Guest</span></td>
+	<button type="submit" name="edit" value="filtprof2" class="icon edit" title="Edit"></button>
+	<td class="name" title="Unrestricted" data-label="Unrestricted"><span>Unrestricted</span></td>
+	<button type="submit" name="edit" value="filtprof3" class="icon edit" title="Edit"></button>
+	`
+
+	// Create test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(mockHTMLResponse))
+	}))
+	defer server.Close()
+
+	// Create client with test server URL
+	client := &Client{
+		baseURL: server.URL,
+		httpClient: server.Client(),
+		getSID: func() (string, error) {
+			return "test-sid", nil
+		},
+	}
+
+	// Call function
+	profiles, err := client.ListAvailableProfiles()
+	if err != nil {
+		t.Fatalf("ListAvailableProfiles() returned error: %v", err)
+	}
+
+	// Verify results
+	if len(profiles) != 3 {
+		t.Errorf("Expected 3 profiles, got %d", len(profiles))
+	}
+
+	// Check profiles
+	expected := map[string]string{
+		"1": "Standard",
+		"2": "Guest",
+		"3": "Unrestricted",
+	}
+
+	for _, p := range profiles {
+		expectedName, ok := expected[p.ID]
+		if !ok {
+			t.Errorf("Unexpected profile ID: %s", p.ID)
+			continue
+		}
+		if p.Name != expectedName {
+			t.Errorf("Expected profile name '%s' for ID '%s', got '%s'", expectedName, p.ID, p.Name)
+		}
+	}
+
+	t.Logf("Successfully parsed profiles: %+v", profiles)
+}
+
 // TestListDevicesWithProfiles is the RED phase - test should FAIL initially
 func TestListDevicesWithProfiles(t *testing.T) {
 	// Mock JSON response from page=netDev&xhrId=all

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -39,13 +40,29 @@ func runDeviceProfilesList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("AHA client not initialized (check router URI, username, and password)")
 	}
 
-	// List devices with their profiles
+	// First, list available profiles
+	profiles, err := ahaClient.ListAvailableProfiles()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to list available profiles: %v\n", err)
+	} else {
+		fmt.Println("Available Profiles")
+		fmt.Println("===================")
+		if len(profiles) == 0 {
+			fmt.Println("No profiles found.")
+		} else {
+			for _, p := range profiles {
+				fmt.Printf("ID: %s - %s\n", p.ID, p.Name)
+			}
+		}
+		fmt.Println()
+	}
+
+	// Then, list devices with their profiles
 	devices, err := ahaClient.ListDevicesWithProfiles()
 	if err != nil {
 		return fmt.Errorf("failed to list devices: %w", err)
 	}
 
-	// Display devices
 	fmt.Println("Devices with Profiles")
 	fmt.Println("======================")
 	if len(devices) == 0 {

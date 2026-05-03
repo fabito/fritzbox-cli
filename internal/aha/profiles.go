@@ -325,3 +325,107 @@ func (c *Client) SetDeviceProfile(deviceID string, profileID string) error {
 	slog.Debug("SetDeviceProfile: success", "deviceID", deviceID, "profileID", profileID)
 	return nil
 }
+
+// parseProfilesFromHTML extracts profile IDs and names from HTML
+// Format from Fritz!Box:
+//   <td class="name" title="Standard" data-label="Standard"><span>Standard</span></td>
+//   <button type="submit" name="edit" value="filtprof1" class="icon edit" title="Edit"></button>
+func parseProfilesFromHTML(html string) []Profile {
+	lines := strings.Split(html, "\n")
+	
+	// Extract profile names from title="NAME"
+	names := []string{}
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.Contains(line, `title="`) {
+			temp := line
+			for {
+				idx := strings.Index(temp, `title="`)
+				if idx == -1 {
+					break
+				}
+				temp = temp[idx+len(`title="`):]
+				end := strings.Index(temp, `"`)
+				if end == -1 {
+					break
+				}
+				name := temp[:end]
+				// Check if this is a profile name
+				if name == "Standard" || name == "Guest" || name == "Unrestricted" ||
+					name == "Restricted" || name == "Kids" || name == "Leo" {
+					names = append(names, name)
+				}
+			}
+		}
+	}
+	
+	// Extract profile IDs from value="filtprofXXXX"
+	ids := []string{}
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.Contains(line, `value="filtprof`) {
+			idx := strings.Index(line, `"filtprof`)
+			if idx != -1 {
+				start := idx + 1 // skip opening quote
+				end := strings.Index(line[start:], `"`)
+				if end != -1 {
+					fullID := line[start : start+end]
+					numericID := strings.TrimPrefix(fullID, "filtprof")
+					ids = append(ids, numericID)
+				}
+			}
+		}
+	}
+	
+	// Pair them
+	profiles := []Profile{}
+	for i := 0; i < len(names) && i < len(ids); i++ {
+		profiles = append(profiles, Profile{ID: ids[i], Name: names[i]})
+	}
+	
+	return profiles
+}
+
+// ListAvailableProfiles lists all available profile definitions
+func (c *Client) ListAvailableProfiles() ([]Profile, error) {
+	// Get SID
+	sid, err := c.getSID()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get SID: %w", err)
+	}
+
+	// Build URL and POST data
+	profileURL := fmt.Sprintf("%s/data.lua", c.baseURL)
+	formData := url.Values{
+		"xhr":    {"1"},
+		"sid":    {sid},
+		"page":   {"kidPro"},
+		"xhrId": {"all"},
+	}
+
+	slog.Debug("ListAvailableProfiles: requesting", "url", profileURL, "page", "kidPro")
+
+	// Make POST request
+	resp, err := c.httpClient.PostForm(profileURL, formData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get profile list: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get profile list: HTTP %d", resp.StatusCode)
+	}
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	slog.Debug("ListAvailableProfiles: response received", "body", string(body))
+
+	// Parse HTML to extract profiles
+	profiles := parseProfilesFromHTML(string(body))
+	return profiles, nil
+}
