@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/xml"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -59,6 +60,65 @@ func TestParseGetInfoResponse(t *testing.T) {
 	}
 
 	t.Logf("Successfully parsed: %+v", resp)
+}
+
+// TestReboot tests the Reboot function
+func TestReboot(t *testing.T) {
+	// Test with nil client (mock - should succeed)
+	err := Reboot(nil)
+	if err != nil {
+		t.Errorf("Reboot with nil client should not error: %v", err)
+	}
+	
+	// Test with mock client that succeeds
+	mockClient := &mockSoapClient{err: nil}
+	err = Reboot(mockClient)
+	if err != nil {
+		t.Errorf("Reboot with mock success client should not error: %v", err)
+	}
+	
+	// Test with mock client that fails
+	mockClientErr := &mockSoapClient{err: fmt.Errorf("mock error")}
+	err = Reboot(mockClientErr)
+	if err == nil {
+		t.Error("Reboot with mock error client should return error")
+	}
+	
+	// Test that correct SOAP parameters are passed
+	mockRecorder := &mockSoapRecorder{}
+	err = Reboot(mockRecorder)
+	if err != nil {
+		t.Errorf("Reboot should not error with recorder: %v", err)
+	}
+	if mockRecorder.servicePath != "/upnp/control/deviceconfig" {
+		t.Errorf("Expected servicePath '/upnp/control/deviceconfig', got '%s'", mockRecorder.servicePath)
+	}
+	if !strings.Contains(mockRecorder.soapAction, "Reboot") {
+		t.Errorf("Expected soapAction to contain 'Reboot', got '%s'", mockRecorder.soapAction)
+	}
+}
+
+// mockSoapClient is a simple mock SOAP client for testing
+type mockSoapClient struct {
+	err error
+}
+
+func (m *mockSoapClient) Call(servicePath, soapAction, soapBody string) (string, error) {
+	return "", m.err
+}
+
+// mockSoapRecorder records call arguments for verification
+type mockSoapRecorder struct {
+	servicePath string
+	soapAction string
+	soapBody   string
+}
+
+func (m *mockSoapRecorder) Call(servicePath, soapAction, soapBody string) (string, error) {
+	m.servicePath = servicePath
+	m.soapAction = soapAction
+	m.soapBody = soapBody
+	return "", nil
 }
 
 // TestCleanSoapResponse tests the CleanSoapResponse function

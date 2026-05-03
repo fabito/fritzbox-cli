@@ -7,6 +7,12 @@ import (
 	"github.com/fabito/fritzboxctl/internal/soap"
 )
 
+// SOAPCaller is an interface for making SOAP calls
+// This allows mocking in tests
+type SOAPCaller interface {
+	Call(servicePath, soapAction, soapBody string) (string, error)
+}
+
 // GetInfoResponse represents the SOAP response for GetInfo
 // The XML tags flatten the nested SOAP structure using path syntax
 // Body > GetInfoResponse > FieldName
@@ -76,4 +82,36 @@ func GetDeviceInfo(soapClient *soap.Client) (*GetInfoResponse, error) {
 	}
 
 	return &info, nil
+}
+
+// Reboot reboots the Fritz!Box
+// If caller is nil, returns nil (mock success)
+// SOAP service: urn:dslforum-org:service:DeviceConfig:1
+// SOAP action: Reboot
+// Service path: /upnp/control/deviceconfig
+func Reboot(caller SOAPCaller) error {
+	if caller == nil {
+		// Mock success for testing
+		return nil
+	}
+
+	// Build SOAP request for Reboot
+	soapBody := `<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+    <s:Body>
+        <u:Reboot xmlns:u="urn:dslforum-org:service:DeviceConfig:1">
+        </u:Reboot>
+    </s:Body>
+</s:Envelope>`
+
+	_, err := caller.Call(
+		"/upnp/control/deviceconfig",
+		"urn:dslforum-org:service:DeviceConfig:1#Reboot",
+		soapBody,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to reboot: %w", err)
+	}
+
+	return nil
 }

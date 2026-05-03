@@ -256,25 +256,15 @@ func newDeviceRebootCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "reboot",
 		Short: "Reboot the Fritz!Box",
+		Long:  "Sends a reboot command to the Fritz!Box. The device will restart within a few seconds.",
 		RunE:  runDeviceReboot,
 	}
 }
 
 // runDeviceReboot executes the reboot command
 func runDeviceReboot(cmd *cobra.Command, args []string) error {
-	soapBody := `<?xml version="1.0" encoding="utf-8"?>
-<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
-    <s:Body>
-        <u:Reboot xmlns:u="urn:dslforum-org:service:DeviceConfig:1">
-        </u:Reboot>
-    </s:Body>
-</s:Envelope>`
-
-	_, err := soapClient.Call(
-		"/upnp/control/deviceconfig",
-		"urn:dslforum-org:service:DeviceConfig:1#Reboot",
-		soapBody,
-	)
+	// Call the service layer to reboot
+	err := services.Reboot(soapClient)
 	if err != nil {
 		return fmt.Errorf("failed to reboot: %w", err)
 	}
