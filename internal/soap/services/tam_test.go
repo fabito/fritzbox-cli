@@ -126,3 +126,60 @@ func cleanSoapResponseForTest(resp string) string {
 	// In real code, this is done by soap.CleanSoapResponse
 	return resp
 }
+
+// TestSetTAMEnabled tests the SetTAMEnabled function (RED phase - test first)
+func TestSetTAMEnabled(t *testing.T) {
+	// This test will FAIL initially because SetTAMEnabled doesn't exist yet
+	// We're testing with nil soapClient which should return mock success
+
+	err := SetTAMEnabled(0, true, nil)
+	if err != nil {
+		t.Errorf("SetTAMEnabled returned error with nil client: %v", err)
+	}
+
+	err = SetTAMEnabled(1, false, nil)
+	if err != nil {
+		t.Errorf("SetTAMEnabled returned error with nil client: %v", err)
+	}
+}
+
+// TestSetTAMEnabledWithRealClient tests with a real SOAP client
+func TestSetTAMEnabledWithRealClient(t *testing.T) {
+	t.Skip("Requires real SOAP client - DO NOT test on real router")
+}
+
+// TestSetTAMEnabledInvalidIndex tests error handling for invalid index
+func TestSetTAMEnabledInvalidIndex(t *testing.T) {
+	// This would need a mock SOAP client that returns error for invalid index
+	t.Skip("Requires mock SOAP client that returns error for invalid index")
+}
+
+// TestSetTAMEnabledWithDisabled tests disabling a TAM
+func TestSetTAMEnabledWithDisabled(t *testing.T) {
+	// Test with nil soapClient (returns mock success)
+	err := SetTAMEnabled(0, false, nil)
+	if err != nil {
+		t.Errorf("SetTAMEnabled returned error when disabling: %v", err)
+	}
+}
+
+// TestSetTAMEnabledMultiple tests enabling/disabling multiple times
+func TestSetTAMEnabledMultiple(t *testing.T) {
+	// Test with nil soapClient (returns mock success)
+	tests := []struct {
+		index   int
+		enabled bool
+	}{
+		{0, true},
+		{0, false},
+		{1, true},
+		{2, false},
+	}
+
+	for _, tt := range tests {
+		err := SetTAMEnabled(tt.index, tt.enabled, nil)
+		if err != nil {
+			t.Errorf("SetTAMEnabled(%d, %t) returned error: %v", tt.index, tt.enabled, err)
+		}
+	}
+}

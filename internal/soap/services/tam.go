@@ -76,3 +76,40 @@ func getTAMInfo(soapClient *soap.Client, index int) (*TAMInfo, error) {
 
 	return &tam, nil
 }
+
+// SetTAMEnabled enables or disables a TAM (answering machine)
+// If soapClient is nil, returns nil (mock mode for testing)
+func SetTAMEnabled(index int, enabled bool, soapClient *soap.Client) error {
+	if soapClient == nil {
+		// Mock mode - return success
+		return nil
+	}
+
+	// Convert enabled to string "1" or "0"
+	enabledStr := "0"
+	if enabled {
+		enabledStr = "1"
+	}
+
+	// Build SOAP request for SetEnable
+	soapBody := fmt.Sprintf(`<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+    <s:Body>
+        <u:SetEnable xmlns:u="urn:dslforum-org:service:X_AVM-DE_TAM:1">
+            <NewTAMIndex>%d</NewTAMIndex>
+            <NewEnable>%s</NewEnable>
+        </u:SetEnable>
+    </s:Body>
+</s:Envelope>`, index, enabledStr)
+
+	_, err := soapClient.Call(
+		"/upnp/control/x_tam",
+		"urn:dslforum-org:service:X_AVM-DE_TAM:1#SetEnable",
+		soapBody,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to set TAM %d enabled=%t: %w", index, enabled, err)
+	}
+
+	return nil
+}

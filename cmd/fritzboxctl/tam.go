@@ -19,6 +19,7 @@ func newTAMCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(newTAMListCommand())
+	cmd.AddCommand(newTAMSetCommand())
 
 	return cmd
 }
@@ -93,5 +94,50 @@ func runTAMList(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	return nil
+}
+
+// newTAMSetCommand creates the TAM set command (enable/disable)
+func newTAMSetCommand() *cobra.Command {
+	var index int
+	var on bool
+	var off bool
+
+	cmd := &cobra.Command{
+		Use:   "set",
+		Short: "Enable or disable a TAM (Answering Machine)",
+		Long:  `Enables or disables a specific TAM (Answering Machine) on the Fritz!Box.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Determine enabled state from --on/--off flags
+			if !on && !off {
+				return fmt.Errorf("must specify either --on or --off")
+			}
+			if on && off {
+				return fmt.Errorf("--on and --off are mutually exclusive")
+			}
+			enabled := on
+			return runTAMSet(index, enabled)
+		},
+	}
+
+	cmd.Flags().IntVarP(&index, "index", "i", 0, "TAM index (default: 0)")
+	cmd.Flags().BoolVar(&on, "on", false, "Enable the TAM")
+	cmd.Flags().BoolVar(&off, "off", false, "Disable the TAM")
+
+	return cmd
+}
+
+// runTAMSet executes the TAM set command
+func runTAMSet(index int, enabled bool) error {
+	err := services.SetTAMEnabled(index, enabled, soapClient)
+	if err != nil {
+		return fmt.Errorf("failed to set TAM: %w", err)
+	}
+
+	status := "disabled"
+	if enabled {
+		status = "enabled"
+	}
+	fmt.Printf("TAM %d %s successfully.\n", index, status)
 	return nil
 }
