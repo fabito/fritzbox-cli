@@ -21,6 +21,23 @@ type GetInfoResponse struct {
 	NewProductClass      string   `xml:"Body>GetInfoResponse>NewProductClass"`
 	NewSoftwareVersion   string   `xml:"Body>GetInfoResponse>NewSoftwareVersion"`
 	NewHardwareVersion   string   `xml:"Body>GetInfoResponse>NewHardwareVersion"`
+	NewDeviceLog       string   `xml:"Body>GetInfoResponse>NewDeviceLog"`
+}
+
+// GetEventLog retrieves the event log from Fritz!Box
+// If soapClient is nil, returns mock data for testing
+func GetEventLog(soapClient *soap.Client) (string, error) {
+	if soapClient == nil {
+		// Return mock data for testing
+		return "30.04.26 11:26:46 IPv6 prefix obtained successfully\n19.04.26 18:40:38 IPv6 internet connection established", nil
+	}
+
+	info, err := GetDeviceInfo(soapClient)
+	if err != nil {
+		return "", fmt.Errorf("failed to get device info: %w", err)
+	}
+
+	return info.NewDeviceLog, nil
 }
 
 // GetDeviceInfo retrieves device information from Fritz!Box

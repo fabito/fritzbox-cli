@@ -68,6 +68,7 @@ Fritz!Box devices via TR-064 (SOAP/UPnP) and AHA-HTTP protocols.`,
 	rootCmd.AddCommand(newTAMCommand())
 	rootCmd.AddCommand(newVPNCommand())
 	rootCmd.AddCommand(newLEDCommand())
+	rootCmd.AddCommand(newLogCommand())
 
 	return rootCmd
 }
