@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/fabito/fritzboxctl/internal/soap/services"
@@ -26,16 +27,41 @@ func newWLANCommand() *cobra.Command {
 
 // newWLANStatusCommand creates the WLAN status command
 func newWLANStatusCommand() *cobra.Command {
-	return &cobra.Command{
+	var band int
+	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Get WLAN status",
-		RunE:  runWLANStatus,
+		Long:  `Retrieves WLAN status such as enabled/disabled, SSID, channel, etc.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runWLANStatus(band)
+		},
 	}
+	cmd.Flags().IntVarP(&band, "band", "b", 0, "WLAN band (1=2.4GHz, 2=5GHz, 3=5GHz 2nd, 4=Guest, 0=all)")
+	return cmd
 }
 
 // runWLANStatus executes the WLAN status command
-func runWLANStatus(cmd *cobra.Command, args []string) error {
-	return fmt.Errorf("WLAN status command not yet implemented")
+func runWLANStatus(band int) error {
+	// If band is 0, show all bands
+	bands := []int{}
+	if band == 0 {
+		bands = []int{1, 2, 3, 4}
+	} else {
+		bands = []int{band}
+	}
+
+	for _, b := range bands {
+		status, err := services.GetWLANStatus(soapClient, b)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to get WLAN status for band %d: %v\n", b, err)
+			continue
+		}
+
+		// Display status
+		displayWLANStatus(status, b)
+	}
+
+	return nil
 }
 
 // newWLANSetCommand creates the WLAN set command
@@ -132,6 +158,27 @@ func runWLANStats(band int) error {
 	}
 
 	return nil
+}
+
+// displayWLANStatus formats and displays WLAN status
+func displayWLANStatus(status *services.WLANStatusResponse, band int) {
+	bandName := getBandName(band)
+
+	switch cfg.OutputFormat {
+	case "json":
+		fmt.Printf(`{"band": %d, "name": "%s", "enabled": "%s", "ssid": "%s", "channel": "%s"}\n`,
+			band, bandName, status.NewEnable, status.NewSSID, status.NewChannel)
+	default:
+		fmt.Printf("\nWLAN Status for %s\n", bandName)
+		fmt.Println("=" + strings.Repeat("=", len("WLAN Status for ")+len(bandName)))
+		fmt.Printf("Enabled:      %s\n", status.NewEnable)
+		fmt.Printf("SSID:         %s\n", status.NewSSID)
+		fmt.Printf("Beacon Type:  %s\n", status.NewBeaconType)
+		fmt.Printf("Channel:      %s\n", status.NewChannel)
+		fmt.Printf("Max Bit Rate: %s\n", status.NewMaxBitRate)
+		fmt.Printf("MAC Address:  %s\n", status.NewMACAddress)
+		fmt.Printf("BSSID:        %s\n", status.NewBSSID)
+	}
 }
 
 // getBandName returns a human-readable band name

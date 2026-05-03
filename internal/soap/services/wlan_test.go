@@ -5,6 +5,27 @@ import (
 	"testing"
 )
 
+// TestGetWLANStatus tests the GetWLANStatus function (RED phase - test first)
+func TestGetWLANStatus(t *testing.T) {
+	// Test with nil client (returns mock data)
+	resp, err := GetWLANStatus(nil, 1)
+	if err != nil {
+		t.Fatalf("GetWLANStatus failed: %v", err)
+	}
+	if resp.NewEnable != "1" {
+		t.Errorf("Expected '1', got '%s'", resp.NewEnable)
+	}
+	if resp.NewSSID != "TestSSID" {
+		t.Errorf("Expected 'TestSSID', got '%s'", resp.NewSSID)
+	}
+
+	// Test with invalid band
+	resp, err = GetWLANStatus(nil, 99)
+	if err == nil {
+		t.Error("Expected error for invalid band")
+	}
+}
+
 // TestGetWLANStats tests the GetWLANStats function
 func TestGetWLANStats(t *testing.T) {
 	// Test with nil client (returns mock data)
@@ -15,6 +36,44 @@ func TestGetWLANStats(t *testing.T) {
 	if resp.NewTotalPacketsSent != "12345" {
 		t.Errorf("Expected '12345', got '%s'", resp.NewTotalPacketsSent)
 	}
+}
+
+// TestParseWLANStatusResponse tests XML parsing of WLAN status response
+func TestParseWLANStatusResponse(t *testing.T) {
+	// Real XML response from Fritz!Box WLANConfiguration:GetInfo (after cleanSoapResponse)
+	xmlData := `<?xml version="1.0"?>
+<Envelope>
+<Body>
+<GetInfoResponse>
+<NewEnable>1</NewEnable>
+<NewSSID>MyWLAN</NewSSID>
+<NewBeaconType>WPA2</NewBeaconType>
+<NewChannel>6</NewChannel>
+<NewMaxBitRate>866</NewMaxBitRate>
+</GetInfoResponse>
+</Body>
+</Envelope>`
+
+	var resp WLANStatusResponse
+	if err := xml.Unmarshal([]byte(xmlData), &resp); err != nil {
+		t.Fatalf("Failed to parse XML: %v", err)
+	}
+
+	// Verify parsed values
+	if resp.NewEnable != "1" {
+		t.Errorf("Expected '1', got '%s'", resp.NewEnable)
+	}
+	if resp.NewSSID != "MyWLAN" {
+		t.Errorf("Expected 'MyWLAN', got '%s'", resp.NewSSID)
+	}
+	if resp.NewBeaconType != "WPA2" {
+		t.Errorf("Expected 'WPA2', got '%s'", resp.NewBeaconType)
+	}
+	if resp.NewChannel != "6" {
+		t.Errorf("Expected '6', got '%s'", resp.NewChannel)
+	}
+
+	t.Logf("Successfully parsed: %+v", resp)
 }
 
 // TestParseWLANStatsResponse tests XML parsing of WLAN stats response
