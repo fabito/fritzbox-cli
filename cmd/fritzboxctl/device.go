@@ -56,6 +56,8 @@ func newDeviceCommand() *cobra.Command {
 
 	cmd.AddCommand(newDeviceInfoCommand())
 	cmd.AddCommand(newDeviceListCommand())
+	cmd.AddCommand(newDeviceBlockCommand())
+	cmd.AddCommand(newDeviceUnblockCommand())
 	cmd.AddCommand(newDeviceRebootCommand())
 	cmd.AddCommand(newDeviceBackupCommand())
 
@@ -194,6 +196,58 @@ func runDeviceList(cmd *cobra.Command, args []string) error {
 
 	// Display the list
 	fmt.Print(formatHostList(hosts))
+	return nil
+}
+
+// newDeviceBlockCommand creates the device block command
+func newDeviceBlockCommand() *cobra.Command {
+	var ipAddress string
+	cmd := &cobra.Command{
+		Use:   "block",
+		Short: "Block device internet access",
+		Long:  "Blocks internet access for a device by IP address.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runDeviceBlock(ipAddress)
+		},
+	}
+	cmd.Flags().StringVarP(&ipAddress, "ip", "i", "", "IP address of the device to block")
+	cmd.MarkFlagRequired("ip")
+	return cmd
+}
+
+// runDeviceBlock executes the device block command
+func runDeviceBlock(ipAddress string) error {
+	err := services.BlockDevice(ipAddress, soapClient)
+	if err != nil {
+		return fmt.Errorf("failed to block device: %w", err)
+	}
+	fmt.Printf("Device %s blocked successfully.\n", ipAddress)
+	return nil
+}
+
+// newDeviceUnblockCommand creates the device unblock command
+func newDeviceUnblockCommand() *cobra.Command {
+	var ipAddress string
+	cmd := &cobra.Command{
+		Use:   "unblock",
+		Short: "Unblock device internet access",
+		Long:  "Unblocks internet access for a device by IP address.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runDeviceUnblock(ipAddress)
+		},
+	}
+	cmd.Flags().StringVarP(&ipAddress, "ip", "i", "", "IP address of the device to unblock")
+	cmd.MarkFlagRequired("ip")
+	return cmd
+}
+
+// runDeviceUnblock executes the device unblock command
+func runDeviceUnblock(ipAddress string) error {
+	err := services.UnblockDevice(ipAddress, soapClient)
+	if err != nil {
+		return fmt.Errorf("failed to unblock device: %w", err)
+	}
+	fmt.Printf("Device %s unblocked successfully.\n", ipAddress)
 	return nil
 }
 

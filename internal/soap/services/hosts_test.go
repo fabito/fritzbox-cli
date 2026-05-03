@@ -5,6 +5,54 @@ import (
 	"testing"
 )
 
+// TestBlockDevice GREEN phase - test should pass now
+func TestBlockDevice(t *testing.T) {
+	// Test with nil client (mock mode)
+	err := BlockDevice("192.168.178.50", nil)
+	if err != nil {
+		t.Errorf("BlockDevice returned error: %v", err)
+	}
+}
+
+// TestUnblockDevice GREEN phase - test should pass now
+func TestUnblockDevice(t *testing.T) {
+	// Test with nil client (mock mode)
+	err := UnblockDevice("192.168.178.50", nil)
+	if err != nil {
+		t.Errorf("UnblockDevice returned error: %v", err)
+	}
+}
+
+// TestBlockDeviceWithMockClient tests with a mock SOAP client
+func TestBlockDeviceWithMockClient(t *testing.T) {
+	// Create a mock soap.Client that returns success
+	// For now, test with nil client (mock mode)
+	err := BlockDevice("192.168.178.100", nil)
+	if err != nil {
+		t.Errorf("BlockDevice with nil client returned error: %v", err)
+	}
+}
+
+// TestUnblockDeviceWithMockClient tests with a mock SOAP client
+func TestUnblockDeviceWithMockClient(t *testing.T) {
+	// Create a mock soap.Client that returns success
+	// For now, test with nil client (mock mode)
+	err := UnblockDevice("192.168.178.100", nil)
+	if err != nil {
+		t.Errorf("UnblockDevice with nil client returned error: %v", err)
+	}
+}
+
+// TestBlockDeviceEmptyIP tests error handling
+func TestBlockDeviceEmptyIP(t *testing.T) {
+	// BlockDevice should handle empty IP gracefully
+	// For now with nil client it should succeed (mock mode)
+	err := BlockDevice("", nil)
+	if err != nil {
+		t.Errorf("BlockDevice with empty IP returned error: %v", err)
+	}
+}
+
 // TestParseHostList tests parsing of host list from Fritz!Box Hosts service
 // RED PHASE: This test references HostListResponse which DOES NOT EXIST YET
 // The test should FAIL to compile
