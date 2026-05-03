@@ -1,13 +1,50 @@
 package main
 
 import (
-	"log/slog"
 	"encoding/xml"
 	"fmt"
+	"log/slog"
+	"os"
 	"strings"
+
+	"github.com/fabito/fritzboxctl/internal/soap/services"
 
 	"github.com/spf13/cobra"
 )
+
+// HostEntry represents a device on the network
+type HostEntry struct {
+	HostName      string
+	IPAddress     string
+	MACAddress    string
+	InterfaceType string
+	Active        bool
+}
+
+// formatHostList formats a list of hosts for display
+func formatHostList(hosts []HostEntry) string {
+	if len(hosts) == 0 {
+		return "No devices found on the network.\n"
+	}
+
+	var result string
+	result += fmt.Sprintf("%-20s %-15s %-17s %-6s\n", "Hostname", "IP", "MAC", "Type")
+	result += fmt.Sprintf("%s\n", strings.Repeat("-", 60))
+
+	for _, host := range hosts {
+		hostname := host.HostName
+		if hostname == "" {
+			hostname = "(unknown)"
+		}
+		active := ""
+		if !host.Active {
+			active = "(inactive)"
+		}
+		result += fmt.Sprintf("%-20s %-15s %-17s %-6s %s\n", hostname, host.IPAddress, host.MACAddress, host.InterfaceType, active)
+	}
+
+	return result
+}
 
 // newDeviceCommand creates the device command tree
 func newDeviceCommand() *cobra.Command {
@@ -18,6 +55,7 @@ func newDeviceCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(newDeviceInfoCommand())
+	cmd.AddCommand(newDeviceListCommand())
 	cmd.AddCommand(newDeviceRebootCommand())
 	cmd.AddCommand(newDeviceBackupCommand())
 
@@ -85,17 +123,9 @@ type Envelope struct {
 // displayDeviceInfo parses and displays device info
 func displayDeviceInfo(resp string) error {
 	// Clean up response for XML parsing - remove namespace prefixes
-	// Remove encodingStyle attribute
-	resp = strings.ReplaceAll(resp, ` encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"`, "")
-	// Fix spaces before >
-	resp = strings.ReplaceAll(resp, " >", ">")
-	resp = strings.ReplaceAll(resp, "xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"", "")
-	resp = strings.ReplaceAll(resp, "xmlns:u=\"urn:dslforum-org:service:DeviceInfo:1\"", "")
-	resp = strings.ReplaceAll(resp, "s:", "")
-	resp = strings.ReplaceAll(resp, "u:", "")
+	resp = cleanSoapResponse(resp)
 
 	slog.Debug("displayDeviceInfo: cleaned response", "response", resp[:min(len(resp), 500)])
-	slog.Debug("displayDeviceInfo: full cleaned response", "response", resp)
 	var info Envelope
 	decoder := xml.NewDecoder(strings.NewReader(resp))
 	if err := decoder.Decode(&info); err != nil {
@@ -137,6 +167,99 @@ func displayDeviceInfoRaw(resp string) error {
 			fmt.Println(strings.TrimSpace(line))
 		}
 	}
+	return nil
+}
+
+// newDeviceListCommand creates the device list command
+func newDeviceListCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List devices on the network",
+		Long:  `Lists all devices connected to the Fritz!Box (LAN and WLAN).`,
+		RunE:  runDeviceList,
+	}
+}
+
+// runDeviceList executes the device list command
+func runDeviceList(cmd *cobra.Command, args []string) error {
+	// Step 1: Get number of hosts
+	soapBody := `<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+    <s:Body>
+        <u:GetHostNumberOfEntries xmlns:u="urn:dslforum-org:service:Hosts:1">
+        </u:GetHostNumberOfEntries>
+    </s:Body>
+</s:Envelope>`
+
+	resp, err := soapClient.Call(
+		"/upnp/control/hosts",
+		"urn:dslforum-org:service:Hosts:1#GetHostNumberOfEntries",
+		soapBody,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to get host count: %w", err)
+	}
+
+	// Parse number of hosts
+	numResponse := services.HostNumberResponse{}
+	resp = cleanSoapResponse(resp)
+	if err := xml.Unmarshal([]byte(resp), &numResponse); err != nil {
+		return fmt.Errorf("failed to parse host count: %w", err)
+	}
+
+	// Convert to int
+	numHosts := 0
+	fmt.Sscanf(numResponse.NewHostNumberOfEntries, "%d", &numHosts)
+
+	if numHosts == 0 {
+		fmt.Println("No devices found on the network.")
+		return nil
+	}
+
+	// Step 2: Get each host entry
+	hosts := make([]HostEntry, 0, numHosts)
+	for i := 1; i <= numHosts; i++ {
+		soapBody = fmt.Sprintf(`<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+    <s:Body>
+        <u:GetGenericHostEntry xmlns:u="urn:dslforum-org:service:Hosts:1">
+            <NewIndex>%d</NewIndex>
+        </u:GetGenericHostEntry>
+    </s:Body>
+</s:Envelope>`, i)
+
+		resp, err = soapClient.Call(
+			"/upnp/control/hosts",
+			"urn:dslforum-org:service:Hosts:1#GetGenericHostEntry",
+			soapBody,
+		)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to get host %d: %v\n", i, err)
+			continue
+		}
+
+		// Parse host entry
+		var hostResp services.HostListResponse
+		resp = cleanSoapResponse(resp)
+		if err := xml.Unmarshal([]byte(resp), &hostResp); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to parse host %d: %v\n", i, err)
+			continue
+		}
+
+		// Convert to HostEntry
+		active := hostResp.NewActive == "1"
+		host := HostEntry{
+			HostName:      hostResp.NewHostName,
+			IPAddress:     hostResp.NewIPAddress,
+			MACAddress:    hostResp.NewMACAddress,
+			InterfaceType: hostResp.NewInterfaceType,
+			Active:        active,
+		}
+		hosts = append(hosts, host)
+	}
+
+	// Display the list
+	fmt.Print(formatHostList(hosts))
 	return nil
 }
 
