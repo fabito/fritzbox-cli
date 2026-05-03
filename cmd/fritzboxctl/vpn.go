@@ -39,8 +39,12 @@ func runVPNList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get SID: %w", err)
 	}
 
-	// Create AHA client
-	client := aha.NewClient(cfg.RouterURI, sid)
+	// Create AHA client with proper URL
+	 routerURI := cfg.RouterURI
+	if !strings.HasPrefix(routerURI, "http://") && !strings.HasPrefix(routerURI, "https://") {
+		routerURI = "http://" + routerURI
+	}
+	client := aha.NewClient(routerURI, sid)
 
 	// List VPN connections
 	connections, err := client.ListVPNConnections()

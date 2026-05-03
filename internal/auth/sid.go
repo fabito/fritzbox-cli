@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/xml"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 )
@@ -32,8 +33,7 @@ func (s *SIDManager) GetSID() (string, error) {
 // Login obtains a new SID from the Fritz!Box
 func (s *SIDManager) Login() (string, error) {
 	soapBody := `<?xml version="1.0" encoding="utf-8"?>
-<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
-            xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
     <s:Body>
         <u:X_AVM-DE_CreateUrlSID xmlns:u="urn:dslforum-org:service:DeviceConfig:1">
         </u:X_AVM-DE_CreateUrlSID>
@@ -48,6 +48,8 @@ func (s *SIDManager) Login() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to call CreateUrlSID: %w", err)
 	}
+
+	slog.Debug("S-IDManager.Login: SOAP response", "response", resp[:min(len(resp), 500)])
 
 	sid, err := extractSID(resp)
 	if err != nil {
