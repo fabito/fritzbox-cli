@@ -58,22 +58,28 @@ func runDeviceInfo(cmd *cobra.Command, args []string) error {
 	return displayDeviceInfo(resp)
 }
 
-// deviceInfoResponse represents the parsed device info
+// GetInfoResponse represents the parsed device info from GetInfo SOAP call
+type GetInfoResponse struct {
+	NewManufacturerName    string `xml:"NewManufacturerName"`
+	NewManufacturerOUI     string `xml:"NewManufacturerOUI"`
+	NewModelName           string `xml:"NewModelName"`
+	NewModelNumber         string `xml:"NewModelNumber"`
+	NewSerialNumber        string `xml:"NewSerialNumber"`
+	NewDescription         string `xml:"NewDescription"`
+	NewProductClass        string `xml:"NewProductClass"`
+	NewSoftwareVersion     string `xml:"NewSoftwareVersion"`
+	NewHardwareVersion     string `xml:"NewHardwareVersion"`
+}
+
+// Body represents the SOAP Body element
+type Body struct {
+	GetInfoResponse GetInfoResponse `xml:"GetInfoResponse"`
+}
+
+// Envelope represents the SOAP Envelope
 type Envelope struct {
 	XMLName xml.Name `xml:"Envelope"`
-	Body   struct {
-		GetInfoResponse struct {
-			NewManufacturerName    string `xml:"NewManufacturerName"`
-			NewManufacturerOUI string `xml:"NewManufacturerOUI"`
-			NewModelName       string `xml:"NewModelName"`
-			NewModelNumber     string `xml:"NewModelNumber"`
-			NewSerialNumber    string `xml:"NewSerialNumber"`
-			NewDescription     string `xml:"NewDescription"`
-			NewProductClass    string `xml:"NewProductClass"`
-			NewSoftwareVersion string `xml:"NewSoftwareVersion"`
-			NewHardwareVersion string `xml:"NewHardwareVersion"`
-		} `xml:"Body>GetInfoResponse"`
-	} `xml:"Body"`
+	Body    Body     `xml:"Body"`
 }
 
 // displayDeviceInfo parses and displays device info

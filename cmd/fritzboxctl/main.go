@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -106,8 +107,34 @@ func initializeClients(cmd *cobra.Command) error {
 	}
 
 	// Create SOAP client
+	// Only prepend http:// if URI doesn't already have a protocol
+	soapBaseURL := cfg.RouterURI
+	if !strings.HasPrefix(soapBaseURL, "http://") && !strings.HasPrefix(soapBaseURL, "https://") {
+		soapBaseURL = fmt.Sprintf("http://%s", soapBaseURL)
+	}
+	// Add port 49000 if not present
+	if !hasPort(soapBaseURL) {
+		// Find where to insert the port (after host, before path)
+		// First, parse the host part
+		hostStart := 0
+		if protoIdx := strings.Index(soapBaseURL, "://"); protoIdx != -1 {
+			hostStart = protoIdx + 3
+		}
+		// Find end of host (before /, ?, # or end of string)
+		hostEnd := len(soapBaseURL)
+		for _, c := range "/?#" {
+			if idx := strings.Index(soapBaseURL[hostStart:], string(c)); idx != -1 {
+				if hostStart+idx < hostEnd {
+					hostEnd = hostStart + idx
+				}
+			}
+		}
+		// Insert port after host
+		soapBaseURL = soapBaseURL[:hostEnd] + ":49000" + soapBaseURL[hostEnd:]
+	}
+
 	soapClient = soap.NewClient(
-		fmt.Sprintf("http://%s:49000", cfg.RouterURI),
+		soapBaseURL,
 		authObj.DigestClient,
 		authObj.HTTPClient,
 	)
@@ -123,4 +150,28 @@ func initializeClients(cmd *cobra.Command) error {
 	}
 
 	return nil
+}
+
+// hasPort checks if a URL already has a port specified
+func hasPort(url string) bool {
+	// Find the host part (after :// and before / or end)
+	// First, remove protocol prefix if present
+	host := url
+	if idx := strings.Index(host, "://"); idx != -1 {
+		host = host[idx+3:]
+	}
+	// Now find end of host (before path or query or fragment)
+	if idx := strings.IndexAny(host, "/?#"); idx != -1 {
+		host = host[:idx]
+	}
+	// Check if host contains a colon (and it's not an IPv6 address)
+	if strings.Contains(host, ":") {
+		// Could be IPv6 like [::1] or host:port
+		// Simple check: if it starts with [ it's IPv6
+		if strings.HasPrefix(host, "[") {
+			return false // IPv6 without port
+		}
+		return true
+	}
+	return false
 }
