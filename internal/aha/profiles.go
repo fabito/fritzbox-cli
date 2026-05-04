@@ -117,9 +117,9 @@ func (c *Client) ListDevicesWithProfiles() ([]DeviceProfile, error) {
 	return devices, nil
 }
 
-// ListProfiles retrieves all available device profiles from Fritz!Box
-// Returns profile definitions like "Standard", "Restricted", etc.
-func (c *Client) ListProfiles() ([]Profile, error) {
+// ListAvailableProfiles lists all available profile definitions (Standard, Restricted, etc.)
+// Parses HTML response from page=kidPro&xhrId=all
+func (c *Client) ListAvailableProfiles() ([]Profile, error) {
 	// Get SID
 	sid, err := c.getSID()
 	if err != nil {
@@ -127,15 +127,15 @@ func (c *Client) ListProfiles() ([]Profile, error) {
 	}
 
 	// Build URL and POST data
-	// From FritzBoxShell: page=kisi_profilelist
 	profileURL := fmt.Sprintf("%s/data.lua", c.baseURL)
 	formData := url.Values{
-		"xhr":  {"1"},
-		"sid":  {sid},
-		"page": {"kisi_profilelist"},
+		"xhr":     {"1"},
+		"sid":      {sid},
+		"page":     {"kidPro"},
+		"xhrId":   {"all"},
 	}
 
-	slog.Debug("ListProfiles: requesting", "url", profileURL, "page", "kisi_profilelist")
+	slog.Debug("ListAvailableProfiles: requesting", "url", profileURL)
 
 	// Make POST request
 	resp, err := c.httpClient.PostForm(profileURL, formData)
@@ -149,60 +149,69 @@ func (c *Client) ListProfiles() ([]Profile, error) {
 		return nil, fmt.Errorf("failed to get profile list: HTTP %d", resp.StatusCode)
 	}
 
-	// Read response body
+	// Read response body (HTML)
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	slog.Debug("ListProfiles: response received", "body", string(body))
+	slog.Debug("ListAvailableProfiles: response received", "body_length", len(body))
 
-	// Parse JSON response - format from FritzBoxShell getProfileName function
-	// The response is an array of [id, name] pairs or an object with profiles
-	var raw json.RawMessage
-	if err := json.Unmarshal(body, &raw); err != nil {
-		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
-	}
-
-	// Try to parse as array of [id, name] pairs first
-	var profileArray [][]interface{}
-	if err := json.Unmarshal(raw, &profileArray); err == nil {
-		profiles := make([]Profile, 0, len(profileArray))
-		for _, p := range profileArray {
-			if len(p) >= 2 {
-				id, _ := p[0].(string)
-				name, _ := p[1].(string)
-				profiles = append(profiles, Profile{ID: id, Name: name})
+	// Parse HTML to extract profiles from input tags with id="filtprofXXX"
+	// Format: <input type="radio" ... id="filtprof1" title="Standard" ...>
+	html := string(body)
+	profiles := []Profile{}
+	
+	// Find all filtprof patterns
+	// Use simple string search to find id="filtprofXXX"
+	for i := 0; i < len(html); {
+		idx := strings.Index(html[i:], "filtprof")
+		if idx == -1 {
+			break
+		}
+		idx += i // Adjust to absolute position
+		
+		// Extract the full id="filtprofXXX"
+		idStart := idx
+		idEnd := idx + len("filtprof")
+		for idEnd < len(html) && html[idEnd] >= '0' && html[idEnd] <= '9' {
+			idEnd++
+		}
+		
+		if idEnd > idStart {
+			profileID := html[idStart:idEnd] // e.g., "filtprof1"
+			numericID := strings.TrimPrefix(profileID, "filtprof")
+			
+			// Look for title="..." before this id
+			titleStart := strings.LastIndex(html[:idStart], "title=\"")
+			if titleStart != -1 {
+				titleStart += len("title=\"")
+				titleEnd := strings.Index(html[titleStart:], "\"")
+				if titleEnd != -1 {
+					profileName := html[titleStart : titleStart+titleEnd]
+					
+					profiles = append(profiles, Profile{
+						ID:   numericID,
+						Name: profileName,
+					})
+				}
 			}
 		}
-		return profiles, nil
+		
+		i = idEnd // Move past this match
 	}
-
-	// Try to parse as object with profiles field
-	var result map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &result); err != nil {
-		return nil, fmt.Errorf("failed to parse response as array or object: %w", err)
-	}
-
-	// Try data.profiles structure
-	if data, ok := result["data"]; ok {
-		var dataObj struct {
-			Profiles []Profile `json:"profiles"`
-		}
-		if err := json.Unmarshal(data, &dataObj); err == nil {
-			return dataObj.Profiles, nil
+	
+	// Remove duplicates (same profile ID might appear multiple times in HTML)
+	seen := map[string]bool{}
+	uniqueProfiles := []Profile{}
+	for _, p := range profiles {
+		if !seen[p.ID] {
+			seen[p.ID] = true
+			uniqueProfiles = append(uniqueProfiles, p)
 		}
 	}
-
-	// Try direct profiles field
-	if profilesRaw, ok := result["profiles"]; ok {
-		var profiles []Profile
-		if err := json.Unmarshal(profilesRaw, &profiles); err == nil {
-			return profiles, nil
-		}
-	}
-
-	return nil, fmt.Errorf("could not parse profiles from response")
+	
+	return uniqueProfiles, nil
 }
 
 // GetDeviceProfile retrieves the current profile ID for a device
@@ -387,45 +396,3 @@ func parseProfilesFromHTML(html string) []Profile {
 }
 
 // ListAvailableProfiles lists all available profile definitions
-func (c *Client) ListAvailableProfiles() ([]Profile, error) {
-	// Get SID
-	sid, err := c.getSID()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get SID: %w", err)
-	}
-
-	// Build URL and POST data
-	profileURL := fmt.Sprintf("%s/data.lua", c.baseURL)
-	formData := url.Values{
-		"xhr":    {"1"},
-		"sid":    {sid},
-		"page":   {"kidPro"},
-		"xhrId": {"all"},
-	}
-
-	slog.Debug("ListAvailableProfiles: requesting", "url", profileURL, "page", "kidPro")
-
-	// Make POST request
-	resp, err := c.httpClient.PostForm(profileURL, formData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get profile list: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Check response status
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get profile list: HTTP %d", resp.StatusCode)
-	}
-
-	// Read response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
-	slog.Debug("ListAvailableProfiles: response received", "body", string(body))
-
-	// Parse HTML to extract profiles
-	profiles := parseProfilesFromHTML(string(body))
-	return profiles, nil
-}

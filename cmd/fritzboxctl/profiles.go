@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/fabito/fritzboxctl/internal/aha"
 
 	"github.com/spf13/cobra"
 )
@@ -43,18 +46,7 @@ func runDeviceProfilesList(cmd *cobra.Command, args []string) error {
 	// First, list available profiles
 	profiles, err := ahaClient.ListAvailableProfiles()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to list available profiles: %v\n", err)
-	} else {
-		fmt.Println("Available Profiles")
-		fmt.Println("===================")
-		if len(profiles) == 0 {
-			fmt.Println("No profiles found.")
-		} else {
-			for _, p := range profiles {
-				fmt.Printf("ID: %s - %s\n", p.ID, p.Name)
-			}
-		}
-		fmt.Println()
+		fmt.Fprintf(os.Stderr, "Warning: Failed to list available profiles: %v\n", err)
 	}
 
 	// Then, list devices with their profiles
@@ -63,27 +55,72 @@ func runDeviceProfilesList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list devices: %w", err)
 	}
 
+	// Output based on format
+	switch cfg.OutputFormat {
+	case "json":
+		return outputProfilesJSON(profiles, devices)
+	default:
+		return outputProfilesText(profiles, devices)
+	}
+}
+
+// outputProfilesJSON outputs profiles in JSON format
+func outputProfilesJSON(profiles []aha.Profile, devices []aha.DeviceProfile) error {
+	// Combine into a single struct
+	type Output struct {
+		Profiles []aha.Profile     `json:"profiles"`
+		Devices  []aha.DeviceProfile `json:"devices"`
+	}
+
+	output := Output{
+		Profiles: profiles,
+		Devices:  devices,
+	}
+
+	// Marshal to JSON
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	return enc.Encode(output)
+}
+
+// outputProfilesText outputs profiles in text format
+func outputProfilesText(profiles []aha.Profile, devices []aha.DeviceProfile) error {
+	// First, show available profiles
+	fmt.Println("Available Profiles")
+	fmt.Println("===================")
+	if len(profiles) == 0 {
+		fmt.Println("No profiles found.")
+	} else {
+		for _, p := range profiles {
+			fmt.Printf("  ID: %s - %s\n", p.ID, p.Name)
+		}
+	}
+
+	fmt.Println()
+
+	// Then, show devices with their profiles
 	fmt.Println("Devices with Profiles")
-	fmt.Println("======================")
+	fmt.Println("=====================")
 	if len(devices) == 0 {
 		fmt.Println("No devices found.")
-	} else {
-		// Print header
-		fmt.Printf("%-20s %-17s %-15s %-10s\n", "Device Name", "MAC", "IP", "Profile")
-		fmt.Println(strings.Repeat("-", 65))
+		return nil
+	}
 
-		// Print devices
-		for _, d := range devices {
-			name := d.DeviceName
-			if name == "" {
-				name = "(unknown)"
-			}
-			profile := d.ProfileName
-			if profile == "" {
-				profile = "(none)"
-			}
-			fmt.Printf("%-20s %-17s %-15s %-10s\n", name, d.MACAddress, d.IPAddress, profile)
+	// Print header
+	fmt.Printf("%-20s %-17s %-15s %-20s\n", "Device Name", "MAC", "IP", "Profile")
+	fmt.Println(strings.Repeat("-", 75))
+
+	// Print devices
+	for _, d := range devices {
+		name := d.DeviceName
+		if name == "" {
+			name = "(unknown)"
 		}
+		profile := d.ProfileName
+		if profile == "" {
+			profile = "(none)"
+		}
+		fmt.Printf("%-20s %-17s %-15s %-20s\n", name, d.MACAddress, d.IPAddress, profile)
 	}
 
 	return nil
