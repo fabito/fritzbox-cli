@@ -59,6 +59,7 @@ func newDeviceCommand() *cobra.Command {
 	cmd.AddCommand(newDeviceProfilesCommand())
 	cmd.AddCommand(newDeviceBlockCommand())
 	cmd.AddCommand(newDeviceUnblockCommand())
+	cmd.AddCommand(newDeviceWOLCommand())
 	cmd.AddCommand(newDeviceRebootCommand())
 	cmd.AddCommand(newDeviceBackupCommand())
 
@@ -380,4 +381,45 @@ func parseConfigFileURL(resp string) string {
 		return resp[idx:]
 	}
 	return resp[idx : idx+end]
+}
+
+// newDeviceWOLCommand creates the WakeOnLAN command
+func newDeviceWOLCommand() *cobra.Command {
+	var macAddress string
+
+	cmd := &cobra.Command{
+		Use:   "wol",
+		Short: "Send Wake-on-LAN packet",
+		Long:  `Sends a Wake-on-LAN (WOL) magic packet to the specified MAC address.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runDeviceWOL(macAddress)
+		},
+	}
+
+	cmd.Flags().StringVarP(&macAddress, "mac", "m", "", "MAC address (format: AA:BB:CC:DD:EE:FF)")
+	cmd.MarkFlagRequired("mac")
+
+	return cmd
+}
+
+// runDeviceWOL executes the WakeOnLAN command
+func runDeviceWOL(macAddress string) error {
+	// Validate MAC address format (simple check)
+	if len(macAddress) != 17 {
+		return fmt.Errorf("invalid MAC address format (use AA:BB:CC:DD:EE:FF)")
+	}
+
+	// Get SOAP client
+	if soapClient == nil {
+		return fmt.Errorf("SOAP client not initialized (check router URI, username, password)")
+	}
+
+	// Call service layer (thin layer)
+	err := services.WakeOnLAN(macAddress, soapClient)
+	if err != nil {
+		return fmt.Errorf("failed to send Wake-on-LAN: %w", err)
+	}
+
+	fmt.Printf("Wake-on-LAN packet sent to %s\n", macAddress)
+	return nil
 }
