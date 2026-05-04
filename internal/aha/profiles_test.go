@@ -30,7 +30,7 @@ func TestListAvailableProfiles(t *testing.T) {
 
 	// Create client with test server URL
 	client := &Client{
-		baseURL: server.URL,
+		baseURL:    server.URL,
 		httpClient: server.Client(),
 		getSID: func() (string, error) {
 			return "test-sid", nil
@@ -100,7 +100,7 @@ func TestListDevicesWithProfiles(t *testing.T) {
 
 	// Create client with test server URL
 	client := &Client{
-		baseURL: server.URL,
+		baseURL:    server.URL,
 		httpClient: server.Client(),
 		getSID: func() (string, error) {
 			return "test-sid", nil
@@ -148,7 +148,7 @@ func TestListDevicesWithProfilesEmpty(t *testing.T) {
 	defer server.Close()
 
 	client := &Client{
-		baseURL: server.URL,
+		baseURL:    server.URL,
 		httpClient: server.Client(),
 		getSID: func() (string, error) {
 			return "test-sid", nil

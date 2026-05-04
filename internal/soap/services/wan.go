@@ -9,11 +9,11 @@ import (
 
 // WANStatusResponse represents the SOAP response for GetStatusInfo
 type WANStatusResponse struct {
-	XMLName               xml.Name `xml:"Envelope"`
-	NewConnectionStatus   string   `xml:"Body>GetStatusInfoResponse>NewConnectionStatus"`
-	NewLastConnectionError string `xml:"Body>GetStatusInfoResponse>NewLastConnectionError"`
-	NewUptime            string   `xml:"Body>GetStatusInfoResponse>NewUptime"`
-	NewDNSServers        string   `xml:"Body>GetStatusInfoResponse>NewDNSServers"`
+	XMLName                xml.Name `xml:"Envelope"`
+	NewConnectionStatus    string   `xml:"Body>GetStatusInfoResponse>NewConnectionStatus"`
+	NewLastConnectionError string   `xml:"Body>GetStatusInfoResponse>NewLastConnectionError"`
+	NewUptime              string   `xml:"Body>GetStatusInfoResponse>NewUptime"`
+	NewDNSServers          string   `xml:"Body>GetStatusInfoResponse>NewDNSServers"`
 }
 
 // GetWANStatus retrieves WAN connection status from Fritz!Box
@@ -24,7 +24,7 @@ func GetWANStatus(soapClient *soap.Client) (*WANStatusResponse, error) {
 		return &WANStatusResponse{
 			NewConnectionStatus:    "Connected",
 			NewLastConnectionError: "ERROR_NONE",
-			NewUptime:             "12345",
+			NewUptime:              "12345",
 		}, nil
 	}
 

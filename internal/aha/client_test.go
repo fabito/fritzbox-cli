@@ -48,7 +48,7 @@ func TestClientGetSIDCalled(t *testing.T) {
 
 	// Access the getSID function (simulate internal usage)
 	sid, _ := client.getSID()
-	
+
 	if !getSIDCalled {
 		t.Error("Expected getSID function to be called")
 	}

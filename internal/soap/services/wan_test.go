@@ -64,11 +64,11 @@ func TestGetWANStatus(t *testing.T) {
 // TestWANStatusResponseXMLParsing tests XML parsing of WAN status response
 func TestWANStatusResponseXMLParsing(t *testing.T) {
 	tests := []struct {
-		name                   string
-		xml                    string
-		expectedStatus         string
-		expectedError          string
-		expectedUptime         string
+		name           string
+		xml            string
+		expectedStatus string
+		expectedError  string
+		expectedUptime string
 	}{
 		{
 			name: "Connected status",
@@ -161,7 +161,7 @@ func TestWANIPConnectionResponseParsing(t *testing.T) {
 
 			var result GetExternalIPAddressResponse
 			err := xml.Unmarshal([]byte(xmlData), &result)
-			
+
 			if tt.shouldPass {
 				if err != nil {
 					t.Fatalf("Failed to parse response: %v", err)
@@ -228,7 +228,7 @@ func TestWANServiceMockClient(t *testing.T) {
 	// Note: GetWANStatus and GetExternalIPAddress use *soap.Client directly
 	// To fully test with mocks, the functions would need to accept an interface
 	// For now, we test the nil case and XML parsing separately
-	
+
 	// Nil client returns mock data
 	status, err := GetWANStatus(nil)
 	if err != nil {
@@ -237,7 +237,7 @@ func TestWANServiceMockClient(t *testing.T) {
 	if status.NewConnectionStatus != "Connected" {
 		t.Errorf("Expected mock status 'Connected', got '%s'", status.NewConnectionStatus)
 	}
-	
+
 	ip, err := GetExternalIPAddress(nil)
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
@@ -249,4 +249,3 @@ func TestWANServiceMockClient(t *testing.T) {
 
 // Verify interface compatibility
 var _ = errors.New // suppress unused import
-

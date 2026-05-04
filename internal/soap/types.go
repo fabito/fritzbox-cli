@@ -4,10 +4,10 @@ import "encoding/xml"
 
 // Envelope represents a SOAP envelope
 type Envelope struct {
-	XMLName xml.Name    `xml:"s:Envelope"`
-	XmlnsS  string     `xml:"xmlns:s,attr"`
-	Encoding string     `xml:"s:encodingStyle,attr"`
-	Body    BodyEnvelope `xml:"s:Body"`
+	XMLName  xml.Name     `xml:"s:Envelope"`
+	XmlnsS   string       `xml:"xmlns:s,attr"`
+	Encoding string       `xml:"s:encodingStyle,attr"`
+	Body     BodyEnvelope `xml:"s:Body"`
 }
 
 // BodyEnvelope represents the SOAP body
@@ -17,7 +17,7 @@ type BodyEnvelope struct {
 
 // Response represents a SOAP response
 type Response struct {
-	XMLName xml.Name `xml:"Envelope"`
+	XMLName xml.Name     `xml:"Envelope"`
 	Body    ResponseBody `xml:"Body"`
 }
 
@@ -42,14 +42,14 @@ type DeviceDescription struct {
 
 // Device represents a device in the description
 type Device struct {
-	DeviceType  string        `xml:"deviceType"`
-	FriendlyName string       `xml:"friendlyName"`
-	Manufacturer string       `xml:"manufacturer"`
-	ModelName   string       `xml:"modelName"`
-	ModelNumber string       `xml:"modelNumber"`
-	SerialNumber string      `xml:"serialNumber"`
-	Services    []Service   `xml:"serviceList>service"`
-	Devices     []Device    `xml:"deviceList>device"`
+	DeviceType   string    `xml:"deviceType"`
+	FriendlyName string    `xml:"friendlyName"`
+	Manufacturer string    `xml:"manufacturer"`
+	ModelName    string    `xml:"modelName"`
+	ModelNumber  string    `xml:"modelNumber"`
+	SerialNumber string    `xml:"serialNumber"`
+	Services     []Service `xml:"serviceList>service"`
+	Devices      []Device  `xml:"deviceList>device"`
 }
 
 // Service represents a service in the description XML
@@ -64,7 +64,7 @@ type Service struct {
 // NewEnvelope creates a new SOAP envelope
 func NewEnvelope(actionNamespace, actionName string, params map[string]string) *Envelope {
 	env := &Envelope{
-		XmlnsS:  "http://schemas.xmlsoap.org/soap/envelope/",
+		XmlnsS:   "http://schemas.xmlsoap.org/soap/envelope/",
 		Encoding: "http://schemas.xmlsoap.org/soap/encoding/",
 		Body: BodyEnvelope{
 			Action: NewAction(actionNamespace, actionName, params),

@@ -47,14 +47,14 @@ func runLEDStatus(cmd *cobra.Command, args []string) error {
 		// Text output
 		fmt.Println("LED Status")
 		fmt.Println("==========")
-		
+
 		// LEDDisplay: 0=ON, 2=OFF
 		ledState := "ON"
 		if status.LEDDisplay == 2 {
 			ledState = "OFF"
 		}
 		fmt.Printf("LED State:      %s\n", ledState)
-		
+
 		if status.CanDim > 0 {
 			fmt.Printf("Dimming:        Supported (level %d)\n", status.DimValue)
 		} else {

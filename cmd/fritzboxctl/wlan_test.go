@@ -24,6 +24,6 @@ func TestDisplayWLANStatus(t *testing.T) {
 			t.Logf("Recovered from panic (expected in test): %v", r)
 		}
 	}()
-	
+
 	displayWLANStatus(status, 1)
 }

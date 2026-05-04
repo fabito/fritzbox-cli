@@ -17,17 +17,17 @@ type SOAPCaller interface {
 // The XML tags flatten the nested SOAP structure using path syntax
 // Body > GetInfoResponse > FieldName
 type GetInfoResponse struct {
-	XMLName              xml.Name `xml:"Envelope"`
-	NewManufacturerName  string   `xml:"Body>GetInfoResponse>NewManufacturerName"`
-	NewManufacturerOUI   string   `xml:"Body>GetInfoResponse>NewManufacturerOUI"`
-	NewModelName         string   `xml:"Body>GetInfoResponse>NewModelName"`
-	NewModelNumber       string   `xml:"Body>GetInfoResponse>NewModelNumber"`
-	NewSerialNumber      string   `xml:"Body>GetInfoResponse>NewSerialNumber"`
-	NewDescription       string   `xml:"Body>GetInfoResponse>NewDescription"`
-	NewProductClass      string   `xml:"Body>GetInfoResponse>NewProductClass"`
-	NewSoftwareVersion   string   `xml:"Body>GetInfoResponse>NewSoftwareVersion"`
-	NewHardwareVersion   string   `xml:"Body>GetInfoResponse>NewHardwareVersion"`
-	NewDeviceLog       string   `xml:"Body>GetInfoResponse>NewDeviceLog"`
+	XMLName             xml.Name `xml:"Envelope"`
+	NewManufacturerName string   `xml:"Body>GetInfoResponse>NewManufacturerName"`
+	NewManufacturerOUI  string   `xml:"Body>GetInfoResponse>NewManufacturerOUI"`
+	NewModelName        string   `xml:"Body>GetInfoResponse>NewModelName"`
+	NewModelNumber      string   `xml:"Body>GetInfoResponse>NewModelNumber"`
+	NewSerialNumber     string   `xml:"Body>GetInfoResponse>NewSerialNumber"`
+	NewDescription      string   `xml:"Body>GetInfoResponse>NewDescription"`
+	NewProductClass     string   `xml:"Body>GetInfoResponse>NewProductClass"`
+	NewSoftwareVersion  string   `xml:"Body>GetInfoResponse>NewSoftwareVersion"`
+	NewHardwareVersion  string   `xml:"Body>GetInfoResponse>NewHardwareVersion"`
+	NewDeviceLog        string   `xml:"Body>GetInfoResponse>NewDeviceLog"`
 }
 
 // GetEventLog retrieves the event log from Fritz!Box

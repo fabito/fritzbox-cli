@@ -50,16 +50,16 @@ func TestGetEventLogFromResponse(t *testing.T) {
 		XMLName      xml.Name `xml:"Envelope"`
 		NewDeviceLog string   `xml:"Body>GetInfoResponse>NewDeviceLog"`
 	}
-	
+
 	var resp TestResponse
 	if err := xml.Unmarshal([]byte(mockXML), &resp); err != nil {
 		t.Fatalf("Failed to parse XML: %v", err)
 	}
-	
+
 	if resp.NewDeviceLog == "" {
 		t.Fatal("NewDeviceLog is empty")
 	}
-	
+
 	t.Logf("Event log length: %d characters", len(resp.NewDeviceLog))
 	t.Logf("First 100 chars: %s", resp.NewDeviceLog[:min(len(resp.NewDeviceLog), 100)])
 }

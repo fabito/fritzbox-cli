@@ -6,43 +6,43 @@ import (
 
 	"github.com/fabito/fritzboxctl/internal/soap"
 )
+
 // soapCaller interface for mocking in tests
 type soapCaller interface {
 	Call(servicePath, action, body string) (string, error)
 }
 
-
 // WLANStatusResponse represents the SOAP response for GetInfo on WLANConfiguration
 // The XML tags flatten the nested SOAP structure using path syntax
 type WLANStatusResponse struct {
-	XMLName            xml.Name `xml:"Envelope"`
-	NewEnable         string   `xml:"Body>GetInfoResponse>NewEnable"`
-	NewSSID           string   `xml:"Body>GetInfoResponse>NewSSID"`
-	NewBeaconType     string   `xml:"Body>GetInfoResponse>NewBeaconType"`
-	NewChannel        string   `xml:"Body>GetInfoResponse>NewChannel"`
-	NewMaxBitRate     string   `xml:"Body>GetInfoResponse>NewMaxBitRate"`
-	NewMACAddress     string   `xml:"Body>GetInfoResponse>NewMACAddress"`
-	NewBSSID          string   `xml:"Body>GetInfoResponse>NewBSSID"`
+	XMLName       xml.Name `xml:"Envelope"`
+	NewEnable     string   `xml:"Body>GetInfoResponse>NewEnable"`
+	NewSSID       string   `xml:"Body>GetInfoResponse>NewSSID"`
+	NewBeaconType string   `xml:"Body>GetInfoResponse>NewBeaconType"`
+	NewChannel    string   `xml:"Body>GetInfoResponse>NewChannel"`
+	NewMaxBitRate string   `xml:"Body>GetInfoResponse>NewMaxBitRate"`
+	NewMACAddress string   `xml:"Body>GetInfoResponse>NewMACAddress"`
+	NewBSSID      string   `xml:"Body>GetInfoResponse>NewBSSID"`
 }
 
 // WLANStatsResponse represents the SOAP response for GetStatistics
 // The XML tags flatten the nested SOAP structure using path syntax
 type WLANStatsResponse struct {
-	XMLName                  xml.Name `xml:"Envelope"`
-	NewTotalPacketsSent      string   `xml:"Body>GetStatisticsResponse>NewTotalPacketsSent"`
-	NewTotalPacketsReceived  string   `xml:"Body>GetStatisticsResponse>NewTotalPacketsReceived"`
-	NewPacketErrorsReceived  string   `xml:"Body>GetStatisticsResponse>NewPacketErrorsReceived"`
-	NewPacketErrorsSent      string   `xml:"Body>GetStatisticsResponse>NewPacketErrorsSent"`
-	NewTotalBytesSent        string   `xml:"Body>GetStatisticsResponse>NewTotalBytesSent"`
-	NewTotalBytesReceived    string   `xml:"Body>GetStatisticsResponse>NewTotalBytesReceived"`
-	NewErrorsReceived        string   `xml:"Body>GetStatisticsResponse>NewErrorsReceived"`
-	NewErrorsSent            string   `xml:"Body>GetStatisticsResponse>NewErrorsSent"`
-	NewUnicastPacketsSent    string   `xml:"Body>GetStatisticsResponse>NewUnicastPacketsSent"`
-	NewUnicastPacketsReceived string  `xml:"Body>GetStatisticsResponse>NewUnicastPacketsReceived"`
-	NewMulticastPacketsSent  string   `xml:"Body>GetStatisticsResponse>NewMulticastPacketsSent"`
-	NewMulticastPacketsReceived string `xml:"Body>GetStatisticsResponse>NewMulticastPacketsReceived"`
-	NewBroadcastPacketsSent  string   `xml:"Body>GetStatisticsResponse>NewBroadcastPacketsSent"`
-	NewBroadcastPacketsReceived string `xml:"Body>GetStatisticsResponse>NewBroadcastPacketsReceived"`
+	XMLName                     xml.Name `xml:"Envelope"`
+	NewTotalPacketsSent         string   `xml:"Body>GetStatisticsResponse>NewTotalPacketsSent"`
+	NewTotalPacketsReceived     string   `xml:"Body>GetStatisticsResponse>NewTotalPacketsReceived"`
+	NewPacketErrorsReceived     string   `xml:"Body>GetStatisticsResponse>NewPacketErrorsReceived"`
+	NewPacketErrorsSent         string   `xml:"Body>GetStatisticsResponse>NewPacketErrorsSent"`
+	NewTotalBytesSent           string   `xml:"Body>GetStatisticsResponse>NewTotalBytesSent"`
+	NewTotalBytesReceived       string   `xml:"Body>GetStatisticsResponse>NewTotalBytesReceived"`
+	NewErrorsReceived           string   `xml:"Body>GetStatisticsResponse>NewErrorsReceived"`
+	NewErrorsSent               string   `xml:"Body>GetStatisticsResponse>NewErrorsSent"`
+	NewUnicastPacketsSent       string   `xml:"Body>GetStatisticsResponse>NewUnicastPacketsSent"`
+	NewUnicastPacketsReceived   string   `xml:"Body>GetStatisticsResponse>NewUnicastPacketsReceived"`
+	NewMulticastPacketsSent     string   `xml:"Body>GetStatisticsResponse>NewMulticastPacketsSent"`
+	NewMulticastPacketsReceived string   `xml:"Body>GetStatisticsResponse>NewMulticastPacketsReceived"`
+	NewBroadcastPacketsSent     string   `xml:"Body>GetStatisticsResponse>NewBroadcastPacketsSent"`
+	NewBroadcastPacketsReceived string   `xml:"Body>GetStatisticsResponse>NewBroadcastPacketsReceived"`
 }
 
 // wlanServiceInfo maps band to service path and type
@@ -221,7 +221,7 @@ func GetWLANChannel(soapClient soapCaller, band int) (string, error) {
 	// Clean and parse response
 	resp = soap.CleanSoapResponse(resp)
 	var result struct {
-		XMLName xml.Name `xml:"Envelope"`
+		XMLName    xml.Name `xml:"Envelope"`
 		NewChannel string   `xml:"Body>GetInfoResponse>NewChannel"`
 	}
 	if err := xml.Unmarshal([]byte(resp), &result); err != nil {
@@ -266,7 +266,7 @@ func GetWLANQRCode(soapClient soapCaller, band int) (string, error) {
 	// Clean and parse response for SSID
 	resp1 = soap.CleanSoapResponse(resp1)
 	var infoResult struct {
-		XMLName  xml.Name `xml:"Envelope"`
+		XMLName xml.Name `xml:"Envelope"`
 		NewSSID string   `xml:"Body>GetInfoResponse>NewSSID"`
 	}
 	if err := xml.Unmarshal([]byte(resp1), &infoResult); err != nil {
@@ -294,7 +294,7 @@ func GetWLANQRCode(soapClient soapCaller, band int) (string, error) {
 	// Clean and parse response for KeyPassphrase
 	resp2 = soap.CleanSoapResponse(resp2)
 	var keyResult struct {
-		XMLName        xml.Name `xml:"Envelope"`
+		XMLName          xml.Name `xml:"Envelope"`
 		NewKeyPassphrase string   `xml:"Body>GetSecurityKeysResponse>NewKeyPassphrase"`
 	}
 	if err := xml.Unmarshal([]byte(resp2), &keyResult); err != nil {

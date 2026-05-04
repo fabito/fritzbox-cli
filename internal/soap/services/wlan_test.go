@@ -8,7 +8,7 @@ import (
 // Mock SOAP caller for testing
 type mockSOAPCaller struct {
 	response string
-	err       error
+	err      error
 }
 
 func (m *mockSOAPCaller) Call(servicePath, action, body string) (string, error) {
@@ -38,9 +38,9 @@ func TestGetWLANQRCode_InvalidBand(t *testing.T) {
 
 // mockQRCodeSOAPCaller is a mock that returns different responses based on the action
 type mockQRCodeSOAPCaller struct {
-	getInfoResponse string
+	getInfoResponse         string
 	getSecurityKeysResponse string
-	err error
+	err                     error
 }
 
 func (m *mockQRCodeSOAPCaller) Call(servicePath, action, body string) (string, error) {
@@ -99,7 +99,7 @@ func TestGetWLANQRCode_MockClient(t *testing.T) {
 func TestGetWLANQRCode_SoapError(t *testing.T) {
 	mockClient := &mockSOAPCaller{
 		response: "",
-		err:       errors.New("SOAP call failed"),
+		err:      errors.New("SOAP call failed"),
 	}
 
 	_, err := GetWLANQRCode(mockClient, 1)
@@ -159,9 +159,9 @@ func TestGetWLANChannel_NilClient(t *testing.T) {
 func TestGetWLANChannel_SoapError(t *testing.T) {
 	mockClient := &mockSOAPCaller{
 		response: "",
-		err:       errors.New("SOAP call failed"),
+		err:      errors.New("SOAP call failed"),
 	}
-	
+
 	_, err := GetWLANChannel(mockClient, 1)
 	if err == nil {
 		t.Error("Expected error from SOAP call")

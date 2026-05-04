@@ -94,7 +94,7 @@ func runNetworkWANStatus(cmd *cobra.Command, args []string) error {
 // newNetworkWANReconnectCommand creates the WAN reconnect command
 func newNetworkWANReconnectCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:  "reconnect",
+		Use:   "reconnect",
 		Short: "Reconnect WAN (redial)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("WAN reconnect command not yet implemented")
@@ -105,7 +105,7 @@ func newNetworkWANReconnectCommand() *cobra.Command {
 // newNetworkDSLCommand creates the DSL command
 func newNetworkDSLCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:  "dsl",
+		Use:   "dsl",
 		Short: "DSL-related commands",
 	}
 
@@ -157,7 +157,7 @@ func runNetworkDSLStatus(cmd *cobra.Command, args []string) error {
 // newNetworkLANCommand creates the LAN command
 func newNetworkLANCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:  "lan",
+		Use:   "lan",
 		Short: "LAN-related commands",
 	}
 

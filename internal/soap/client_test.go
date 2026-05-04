@@ -68,8 +68,8 @@ func TestBuildSoapEnvelope(t *testing.T) {
 
 func TestBuildSoapEnvelopeMultipleParams(t *testing.T) {
 	params := map[string]string{
-		"NewIndex":      "0",
-		"NewEnable":     "1",
+		"NewIndex":     "0",
+		"NewEnable":    "1",
 		"NewSomeValue": "test",
 	}
 

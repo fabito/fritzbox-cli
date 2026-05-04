@@ -25,9 +25,9 @@ type Config struct {
 const (
 	DefaultRouterURI = "192.168.178.1"
 	DefaultTimeout   = 10 * time.Second
-	DefaultOutput   = "text"
-	ConfigDir       = ".config/fritzboxctl"
-	ConfigFile      = "config.yaml"
+	DefaultOutput    = "text"
+	ConfigDir        = ".config/fritzboxctl"
+	ConfigFile       = "config.yaml"
 )
 
 // Load loads configuration from all sources
@@ -43,8 +43,8 @@ func Load() (*Config, error) {
 	// Config file settings
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
-	v.AddConfigPath(".")                                   // Current directory
-	v.AddConfigPath(filepath.Join("$HOME", ConfigDir))     // ~/.config/fritzboxctl/
+	v.AddConfigPath(".")                                    // Current directory
+	v.AddConfigPath(filepath.Join("$HOME", ConfigDir))      // ~/.config/fritzboxctl/
 	v.AddConfigPath(filepath.Join("$HOME", ".fritzboxctl")) // Legacy location
 
 	// Environment variable settings (auto-discovered)
