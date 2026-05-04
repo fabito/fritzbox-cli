@@ -6,6 +6,11 @@ import (
 
 	"github.com/fabito/fritzboxctl/internal/soap"
 )
+// soapCaller interface for mocking in tests
+type soapCaller interface {
+	Call(servicePath, action, body string) (string, error)
+}
+
 
 // WLANStatusResponse represents the SOAP response for GetInfo on WLANConfiguration
 // The XML tags flatten the nested SOAP structure using path syntax
@@ -180,4 +185,79 @@ func SetWLANEnabled(band int, enabled bool, soapClient *soap.Client) error {
 	}
 
 	return nil
+}
+
+// GetWLANQRCode returns the QR code string for WLAN connection
+// QR format: WIFI:T:WPA;S:<ssid>;P:<password>;;
+func GetWLANQRCode(soapClient soapCaller, band int) (string, error) {
+	// Get service info for the band
+	info, ok := wlanServiceInfo[band]
+	if !ok {
+		return "", fmt.Errorf("invalid band: %d (use 1-4)", band)
+	}
+
+	// If soapClient is nil, return mock data for testing
+	if soapClient == nil {
+		return "WIFI:T:WPA;S:TestSSID;P:TestPass;;", nil
+	}
+
+	// Step 1: Get SSID from GetInfo
+	soapBody1 := fmt.Sprintf(`<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+    <s:Body>
+        <u:GetInfo xmlns:u="%s">
+        </u:GetInfo>
+    </s:Body>
+</s:Envelope>`, info.Type)
+
+	resp1, err := soapClient.Call(
+		info.Path,
+		info.Type+"#GetInfo",
+		soapBody1,
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to get WLAN info: %w", err)
+	}
+
+	// Clean and parse response for SSID
+	resp1 = soap.CleanSoapResponse(resp1)
+	var infoResult struct {
+		XMLName  xml.Name `xml:"Envelope"`
+		NewSSID string   `xml:"Body>GetInfoResponse>NewSSID"`
+	}
+	if err := xml.Unmarshal([]byte(resp1), &infoResult); err != nil {
+		return "", fmt.Errorf("failed to parse GetInfo response: %w", err)
+	}
+
+	// Step 2: Get KeyPassphrase from GetSecurityKeys
+	soapBody2 := fmt.Sprintf(`<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+    <s:Body>
+        <u:GetSecurityKeys xmlns:u="%s">
+        </u:GetSecurityKeys>
+    </s:Body>
+</s:Envelope>`, info.Type)
+
+	resp2, err := soapClient.Call(
+		info.Path,
+		info.Type+"#GetSecurityKeys",
+		soapBody2,
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to get WLAN security keys: %w", err)
+	}
+
+	// Clean and parse response for KeyPassphrase
+	resp2 = soap.CleanSoapResponse(resp2)
+	var keyResult struct {
+		XMLName        xml.Name `xml:"Envelope"`
+		NewKeyPassphrase string   `xml:"Body>GetSecurityKeysResponse>NewKeyPassphrase"`
+	}
+	if err := xml.Unmarshal([]byte(resp2), &keyResult); err != nil {
+		return "", fmt.Errorf("failed to parse GetSecurityKeys response: %w", err)
+	}
+
+	// Generate QR code string
+	qrData := fmt.Sprintf("WIFI:T:WPA;S:%s;P:%s;;", infoResult.NewSSID, keyResult.NewKeyPassphrase)
+	return qrData, nil
 }

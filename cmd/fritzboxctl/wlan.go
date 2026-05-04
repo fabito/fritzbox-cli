@@ -8,6 +8,7 @@ import (
 	"github.com/fabito/fritzboxctl/internal/soap/services"
 
 	"github.com/spf13/cobra"
+	"encoding/json"
 )
 
 // newWLANCommand creates the WLAN command tree
@@ -21,6 +22,7 @@ func newWLANCommand() *cobra.Command {
 	cmd.AddCommand(newWLANStatusCommand())
 	cmd.AddCommand(newWLANSetCommand())
 	cmd.AddCommand(newWLANStatsCommand())
+	cmd.AddCommand(newWLANQRCodeCommand())
 
 	return cmd
 }
@@ -232,4 +234,59 @@ func getBandName(band int) string {
 	default:
 		return fmt.Sprintf("Unknown (%d)", band)
 	}
+}
+
+// newWLANQRCodeCommand creates the WLAN QR code command
+// newWLANQRCodeCommand creates the WLAN QR code command
+func newWLANQRCodeCommand() *cobra.Command {
+	var band int
+	cmd := &cobra.Command{
+		Use:   "qrcode",
+		Short: "Generate QR code for WLAN connection",
+		Long:  `Generates a QR code string for connecting to the WLAN. Use with a QR code generator.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runWLANQRCode(band)
+		},
+	}
+	cmd.Flags().IntVarP(&band, "band", "b", 1, "WLAN band (1=2.4GHz, 2=5GHz, 3=5GHz ch2, 4=Guest)")
+	return cmd
+}
+
+func runWLANQRCode(band int) error {
+	if soapClient == nil {
+		return fmt.Errorf("SOAP client not initialized (check router URI, username, and password)")
+	}
+
+	// Get QR code string from service layer
+	qrData, err := services.GetWLANQRCode(soapClient, band)
+	if err != nil {
+		return fmt.Errorf("failed to get QR code: %w", err)
+	}
+
+	// Output based on format
+	switch cfg.OutputFormat {
+	case "json":
+		type QRCodeOutput struct {
+			Band   int    `json:"band"`
+			QRData string `json:"qr_data"`
+		}
+		output := QRCodeOutput{
+			Band:   band,
+			QRData: qrData,
+		}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(output)
+	default:
+		// Text output
+		fmt.Println("WLAN QR Code Data:")
+		fmt.Println("===================")
+		fmt.Printf("Band: %d\n", band)
+		fmt.Printf("QR Data: %s\n", qrData)
+		fmt.Println()
+		fmt.Println("To generate a QR code image, use a QR code generator with the above data.")
+		fmt.Println("Example with qrencode:")
+		fmt.Printf("  echo '%s' | qrencode -t PNG -o wlan-qr.png\n", qrData)
+	}
+	return nil
 }
