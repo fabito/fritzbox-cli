@@ -76,3 +76,63 @@ func TestGetWLANQRCode_SoapError(t *testing.T) {
 		t.Error("Expected error from SOAP call")
 	}
 }
+
+// TestGetWLANChannel_Red tests the RED phase (should fail initially)
+func TestGetWLANChannel_Red(t *testing.T) {
+	// This test will fail to compile initially because GetWLANChannel doesn't exist yet
+	// After function is created, it will fail because mock returns empty string
+	mockClient := &mockSOAPCaller{
+		response: `<?xml version="1.0"?>
+<Envelope>
+<Body>
+<GetInfoResponse>
+<NewChannel>6</NewChannel>
+</GetInfoResponse>
+</Body>
+</Envelope>`,
+		err: nil,
+	}
+
+	// This will fail to compile initially
+	channel, err := GetWLANChannel(mockClient, 1)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if channel != "6" {
+		t.Errorf("Expected channel '6', got '%s'", channel)
+	}
+}
+
+// TestGetWLANChannel_InvalidBand tests invalid band
+func TestGetWLANChannel_InvalidBand(t *testing.T) {
+	// After GetWLANChannel exists, this will fail with invalid band error
+	_, err := GetWLANChannel(nil, 99)
+	if err == nil {
+		t.Error("Expected error for invalid band 99")
+	}
+}
+
+// TestGetWLANChannel_NilClient tests nil client mock
+func TestGetWLANChannel_NilClient(t *testing.T) {
+	// With nil client, should return mock data (channel "6")
+	channel, err := GetWLANChannel(nil, 1)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	if channel != "6" {
+		t.Errorf("Expected '6', got '%s'", channel)
+	}
+}
+
+// TestGetWLANChannel_SoapError tests SOAP error
+func TestGetWLANChannel_SoapError(t *testing.T) {
+	mockClient := &mockSOAPCaller{
+		response: "",
+		err:       errors.New("SOAP call failed"),
+	}
+	
+	_, err := GetWLANChannel(mockClient, 1)
+	if err == nil {
+		t.Error("Expected error from SOAP call")
+	}
+}

@@ -187,6 +187,50 @@ func SetWLANEnabled(band int, enabled bool, soapClient *soap.Client) error {
 	return nil
 }
 
+// GetWLANChannel retrieves the WLAN channel for the specified band
+// If soapClient is nil, returns mock data for testing
+func GetWLANChannel(soapClient soapCaller, band int) (string, error) {
+	info, ok := wlanServiceInfo[band]
+	if !ok {
+		return "", fmt.Errorf("invalid band: %d (use 1-4)", band)
+	}
+
+	if soapClient == nil {
+		// Return mock data for testing
+		return "6", nil
+	}
+
+	// Build SOAP request for GetInfo
+	soapBody := fmt.Sprintf(`<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+    <s:Body>
+        <u:GetInfo xmlns:u="%s">
+        </u:GetInfo>
+    </s:Body>
+</s:Envelope>`, info.Type)
+
+	resp, err := soapClient.Call(
+		info.Path,
+		info.Type+"#GetInfo",
+		soapBody,
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to get WLAN info: %w", err)
+	}
+
+	// Clean and parse response
+	resp = soap.CleanSoapResponse(resp)
+	var result struct {
+		XMLName xml.Name `xml:"Envelope"`
+		NewChannel string   `xml:"Body>GetInfoResponse>NewChannel"`
+	}
+	if err := xml.Unmarshal([]byte(resp), &result); err != nil {
+		return "", fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return result.NewChannel, nil
+}
+
 // GetWLANQRCode returns the QR code string for WLAN connection
 // QR format: WIFI:T:WPA;S:<ssid>;P:<password>;;
 func GetWLANQRCode(soapClient soapCaller, band int) (string, error) {

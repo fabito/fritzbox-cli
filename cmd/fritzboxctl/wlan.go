@@ -23,6 +23,7 @@ func newWLANCommand() *cobra.Command {
 	cmd.AddCommand(newWLANSetCommand())
 	cmd.AddCommand(newWLANStatsCommand())
 	cmd.AddCommand(newWLANQRCodeCommand())
+	cmd.AddCommand(newWLANChannelCommand())
 
 	return cmd
 }
@@ -289,4 +290,66 @@ func runWLANQRCode(band int) error {
 		fmt.Printf("  echo '%s' | qrencode -t PNG -o wlan-qr.png\n", qrData)
 	}
 	return nil
+}
+
+// newWLANChannelCommand creates the WLAN channel command
+func newWLANChannelCommand() *cobra.Command {
+	var band int
+	var setChannel string
+
+	cmd := &cobra.Command{
+		Use:   "channel",
+		Short: "Get/set WLAN channel",
+		Long:  `Gets or sets the WLAN channel for the specified band.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if setChannel != "" {
+				// Write operation - do NOT test on real router
+				return runSetWLANChannel(band, setChannel)
+			}
+			// Read operation - OK to test on real router
+			return runGetWLANChannel(band)
+		},
+	}
+
+	cmd.Flags().IntVarP(&band, "band", "b", 1, "WLAN band (1=2.4GHz, 2=5GHz, 3=5GHz ch2, 4=Guest)")
+	cmd.Flags().StringVar(&setChannel, "set", "", "Set channel (write operation, use with caution)")
+	return cmd
+}
+
+// runGetWLANChannel executes the get channel command (read-only)
+func runGetWLANChannel(band int) error {
+	if soapClient == nil {
+		return fmt.Errorf("SOAP client not initialized (check router URI, username, and password)")
+	}
+
+	channel, err := services.GetWLANChannel(soapClient, band)
+	if err != nil {
+		return fmt.Errorf("failed to get WLAN channel: %w", err)
+	}
+
+	// Output based on format
+	switch cfg.OutputFormat {
+	case "json":
+		type Output struct {
+			Band    int    `json:"band"`
+			Channel string `json:"channel"`
+		}
+		output := Output{Band: band, Channel: channel}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(output)
+	default:
+		bandName := getBandName(band)
+		fmt.Printf("WLAN Channel for %s\n", bandName)
+		fmt.Println("=========================")
+		fmt.Printf("Channel: %s\n", channel)
+	}
+	return nil
+}
+
+// runSetWLANChannel executes the set channel command (write operation)
+// WARNING: Do NOT test on real router without caution
+func runSetWLANChannel(band int, channel string) error {
+	// This is a write operation - implement in service layer
+	return fmt.Errorf("SetChannel not yet implemented in service layer")
 }
