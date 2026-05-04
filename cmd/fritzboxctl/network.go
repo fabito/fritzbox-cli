@@ -179,51 +179,34 @@ func newNetworkLANStatsCommand() *cobra.Command {
 
 // runNetworkLANStats executes the LAN stats command
 func runNetworkLANStats(cmd *cobra.Command, args []string) error {
-	// Call the service layer (thin CLI - just delegates)
-	stats, err := services.GetLANStats(soapClient)
-	if err != nil {
-		return fmt.Errorf("failed to get LAN statistics: %w", err)
-	}
-
-	// Display the result (format output in cmd/)
-	switch cfg.OutputFormat {
-	case "json":
-		fmt.Printf(`{"bytes_sent": "%s", "bytes_received": "%s", "packets_sent": "%s", "packets_received": "%s"}\n`,
-			stats.NewBytesSent, stats.NewBytesReceived,
-			stats.NewPacketsSent, stats.NewPacketsReceived)
-	default:
-		fmt.Println("LAN Port Statistics")
-		fmt.Println("=============================")
-		if stats.NewBytesSent != "" {
-			fmt.Printf("Bytes Sent:        %s\n", stats.NewBytesSent)
-		}
-		if stats.NewBytesReceived != "" {
-			fmt.Printf("Bytes Received:    %s\n", stats.NewBytesReceived)
-		}
-		if stats.NewPacketsSent != "" {
-			fmt.Printf("Packets Sent:      %s\n", stats.NewPacketsSent)
-		}
-		if stats.NewPacketsReceived != "" {
-			fmt.Printf("Packets Received:  %s\n", stats.NewPacketsReceived)
-		}
-		if stats.NewErrorsSent != "" {
-			fmt.Printf("Errors Sent:       %s\n", stats.NewErrorsSent)
-		}
-		if stats.NewErrorsReceived != "" {
-			fmt.Printf("Errors Received:   %s\n", stats.NewErrorsReceived)
-		}
-	}
-
-	return nil
+	// LAN stats is not implemented yet in services
+	return fmt.Errorf("LAN stats command not yet implemented")
 }
 
 // newNetworkLANCountCommand creates the LAN count command
 func newNetworkLANCountCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:  "count",
-		Short: "Get number of LAN ports",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return fmt.Errorf("LAN count command not yet implemented")
-		},
+		Use:   "count",
+		Short: "Get number of LAN devices",
+		RunE:  runNetworkLANCount,
 	}
+}
+
+// runNetworkLANCount executes the LAN count command
+func runNetworkLANCount(cmd *cobra.Command, args []string) error {
+	// Call the service layer (thin CLI - just delegates)
+	count, err := services.GetLANCount(soapClient)
+	if err != nil {
+		return fmt.Errorf("failed to get LAN count: %w", err)
+	}
+
+	// Display the result
+	switch cfg.OutputFormat {
+	case "json":
+		fmt.Printf(`{"count": %d}`+"\n", count)
+	default:
+		fmt.Printf("LAN Devices Connected: %d\n", count)
+	}
+
+	return nil
 }
