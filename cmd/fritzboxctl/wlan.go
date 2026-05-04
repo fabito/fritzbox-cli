@@ -7,8 +7,8 @@ import (
 
 	"github.com/fabito/fritzboxctl/internal/soap/services"
 
-	"github.com/spf13/cobra"
 	"encoding/json"
+	"github.com/spf13/cobra"
 )
 
 // newWLANCommand creates the WLAN command tree

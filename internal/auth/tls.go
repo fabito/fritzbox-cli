@@ -12,16 +12,16 @@ import (
 // TLSConfig holds TLS configuration options
 type TLSConfig struct {
 	InsecureSkipVerify bool
-	CertFile         string
-	KeyFile          string
-	CACertFile       string
+	CertFile           string
+	KeyFile            string
+	CACertFile         string
 }
 
 // NewTLSConfig creates a new TLS configuration
 func NewTLSConfig(insecureSkipVerify bool) *tls.Config {
 	return &tls.Config{
 		InsecureSkipVerify: insecureSkipVerify,
-		MinVersion:       tls.VersionTLS12,
+		MinVersion:         tls.VersionTLS12,
 	}
 }
 

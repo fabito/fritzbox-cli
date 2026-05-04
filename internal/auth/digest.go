@@ -22,10 +22,10 @@ type DigestClient struct {
 	mu       sync.RWMutex
 
 	// Digest session state
-	nonce   string
-	opaque  string
-	realm    string
-	qop      string
+	nonce     string
+	opaque    string
+	realm     string
+	qop       string
 	algorithm string
 	nc        int
 	lastNonce string

@@ -69,21 +69,21 @@ func TestReboot(t *testing.T) {
 	if err != nil {
 		t.Errorf("Reboot with nil client should not error: %v", err)
 	}
-	
+
 	// Test with mock client that succeeds
 	mockClient := &mockSoapClient{err: nil}
 	err = Reboot(mockClient)
 	if err != nil {
 		t.Errorf("Reboot with mock success client should not error: %v", err)
 	}
-	
+
 	// Test with mock client that fails
 	mockClientErr := &mockSoapClient{err: fmt.Errorf("mock error")}
 	err = Reboot(mockClientErr)
 	if err == nil {
 		t.Error("Reboot with mock error client should return error")
 	}
-	
+
 	// Test that correct SOAP parameters are passed
 	mockRecorder := &mockSoapRecorder{}
 	err = Reboot(mockRecorder)
@@ -110,8 +110,8 @@ func (m *mockSoapClient) Call(servicePath, soapAction, soapBody string) (string,
 // mockSoapRecorder records call arguments for verification
 type mockSoapRecorder struct {
 	servicePath string
-	soapAction string
-	soapBody   string
+	soapAction  string
+	soapBody    string
 }
 
 func (m *mockSoapRecorder) Call(servicePath, soapAction, soapBody string) (string, error) {

@@ -9,12 +9,12 @@ import (
 
 // TAMInfo represents a TAM (answering machine) on the Fritz!Box
 type TAMInfo struct {
-	XMLName                xml.Name `xml:"Envelope"`
-	NewTAMIndex            string   `xml:"Body>GetInfoResponse>NewTAMIndex"`
-	NewTAMName             string   `xml:"Body>GetInfoResponse>NewTAMName"`
-	NewTAMEnable           string   `xml:"Body>GetInfoResponse>NewTAMEnable"`
-	NewTAMNewMessageCount  string   `xml:"Body>GetInfoResponse>NewTAMNewMessageCount"`
-	NewTAMTotalMessageCount string  `xml:"Body>GetInfoResponse>NewTAMTotalMessageCount"`
+	XMLName                 xml.Name `xml:"Envelope"`
+	NewTAMIndex             string   `xml:"Body>GetInfoResponse>NewTAMIndex"`
+	NewTAMName              string   `xml:"Body>GetInfoResponse>NewTAMName"`
+	NewTAMEnable            string   `xml:"Body>GetInfoResponse>NewTAMEnable"`
+	NewTAMNewMessageCount   string   `xml:"Body>GetInfoResponse>NewTAMNewMessageCount"`
+	NewTAMTotalMessageCount string   `xml:"Body>GetInfoResponse>NewTAMTotalMessageCount"`
 }
 
 // ListTAMs lists all TAMs (answering machines) on the Fritz!Box
@@ -24,10 +24,10 @@ func ListTAMs(soapClient *soap.Client) ([]TAMInfo, error) {
 		// Return mock data for testing
 		return []TAMInfo{
 			{
-				NewTAMIndex:            "0",
-				NewTAMName:             "TAM 0",
-				NewTAMEnable:           "1",
-				NewTAMNewMessageCount:  "3",
+				NewTAMIndex:             "0",
+				NewTAMName:              "TAM 0",
+				NewTAMEnable:            "1",
+				NewTAMNewMessageCount:   "3",
 				NewTAMTotalMessageCount: "10",
 			},
 		}, nil

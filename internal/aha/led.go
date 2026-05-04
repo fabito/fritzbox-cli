@@ -27,7 +27,7 @@ func (c *Client) GetLEDStatus() (*LEDStatus, error) {
 		return nil, fmt.Errorf("failed to get SID: %w", err)
 	}
 	slog.Debug("GetLEDStatus: got SID", "sid", sid)
-	
+
 	// Build URL with SID
 	ledURL := fmt.Sprintf("%s/data.lua", c.baseURL)
 	formData := url.Values{
@@ -81,10 +81,10 @@ func (c *Client) SetLEDEnabled(enabled bool) error {
 	// Build URL and POST data
 	ledURL := fmt.Sprintf("%s/data.lua", c.baseURL)
 	formData := url.Values{
-		"sid":        {sid},
-		"page":       {"led"},
+		"sid":         {sid},
+		"page":        {"led"},
 		"led_display": {ledDisplay},
-		"apply":      {""},
+		"apply":       {""},
 	}
 
 	// Make POST request

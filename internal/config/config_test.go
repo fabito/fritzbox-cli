@@ -90,7 +90,7 @@ func TestSaveAndLoad(t *testing.T) {
 		RepeaterUser: "repuser",
 		RepeaterPass: "reppass",
 		Timeout:      30 * time.Second,
-		OutputFormat:  "json",
+		OutputFormat: "json",
 	}
 
 	// Save

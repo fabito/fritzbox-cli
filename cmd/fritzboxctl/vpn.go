@@ -63,7 +63,7 @@ func runVPNList(cmd *cobra.Command, args []string) error {
 	if !strings.HasPrefix(routerURI, "http://") && !strings.HasPrefix(routerURI, "https://") {
 		routerURI = "http://" + routerURI
 	}
-	
+
 	client := aha.NewClient(routerURI, func() (string, error) {
 		return authObj.SIDManager.GetSID()
 	})
@@ -94,7 +94,7 @@ func runVPNList(cmd *cobra.Command, args []string) error {
 			if conn.Enabled {
 				enabled = "Yes"
 			}
-		fmt.Printf("%-20s %-10s %-15s %-12s\n", conn.Name, conn.Type, conn.Status, enabled)
+			fmt.Printf("%-20s %-10s %-15s %-12s\n", conn.Name, conn.Type, conn.Status, enabled)
 		}
 	}
 

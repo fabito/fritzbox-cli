@@ -34,7 +34,7 @@ func GetLANCount(soapClient *soap.Client) (int, error) {
 	// Clean and parse response
 	resp = soap.CleanSoapResponse(resp)
 	var result struct {
-		XMLName              xml.Name `xml:"Envelope"`
+		XMLName                xml.Name `xml:"Envelope"`
 		NewHostNumberOfEntries string   `xml:"Body>GetHostNumberOfEntriesResponse>NewHostNumberOfEntries"`
 	}
 	if err := xml.Unmarshal([]byte(resp), &result); err != nil {

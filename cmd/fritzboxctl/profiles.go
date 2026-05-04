@@ -68,7 +68,7 @@ func runDeviceProfilesList(cmd *cobra.Command, args []string) error {
 func outputProfilesJSON(profiles []aha.Profile, devices []aha.DeviceProfile) error {
 	// Combine into a single struct
 	type Output struct {
-		Profiles []aha.Profile     `json:"profiles"`
+		Profiles []aha.Profile       `json:"profiles"`
 		Devices  []aha.DeviceProfile `json:"devices"`
 	}
 

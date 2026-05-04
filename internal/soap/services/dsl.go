@@ -10,16 +10,16 @@ import (
 // DSLStatusResponse represents the SOAP response for GetInfo on WANDSLInterfaceConfig
 // The XML tags flatten the nested SOAP structure using path syntax
 type DSLStatusResponse struct {
-	XMLName                        xml.Name `xml:"Envelope"`
-	NewEnable                      string   `xml:"Body>GetInfoResponse>NewEnable"`
-	NewStatus                      string   `xml:"Body>GetInfoResponse>NewStatus"`
-	NewDataPath                    string   `xml:"Body>GetInfoResponse>NewDataPath"`
-	NewDownstreamCurrRate          string   `xml:"Body>GetInfoResponse>NewDownstreamCurrRate"`
-	NewUpstreamCurrRate            string   `xml:"Body>GetInfoResponse>NewUpstreamCurrRate"`
-	NewDownstreamMaxRate           string   `xml:"Body>GetInfoResponse>NewDownstreamMaxRate"`
-	NewUpstreamMaxRate             string   `xml:"Body>GetInfoResponse>NewUpstreamMaxRate"`
-	NewDownstreamNoiseMargin       string   `xml:"Body>GetInfoResponse>NewDownstreamNoiseMargin"`
-	NewUpstreamNoiseMargin         string   `xml:"Body>GetInfoResponse>NewUpstreamNoiseMargin"`
+	XMLName                  xml.Name `xml:"Envelope"`
+	NewEnable                string   `xml:"Body>GetInfoResponse>NewEnable"`
+	NewStatus                string   `xml:"Body>GetInfoResponse>NewStatus"`
+	NewDataPath              string   `xml:"Body>GetInfoResponse>NewDataPath"`
+	NewDownstreamCurrRate    string   `xml:"Body>GetInfoResponse>NewDownstreamCurrRate"`
+	NewUpstreamCurrRate      string   `xml:"Body>GetInfoResponse>NewUpstreamCurrRate"`
+	NewDownstreamMaxRate     string   `xml:"Body>GetInfoResponse>NewDownstreamMaxRate"`
+	NewUpstreamMaxRate       string   `xml:"Body>GetInfoResponse>NewUpstreamMaxRate"`
+	NewDownstreamNoiseMargin string   `xml:"Body>GetInfoResponse>NewDownstreamNoiseMargin"`
+	NewUpstreamNoiseMargin   string   `xml:"Body>GetInfoResponse>NewUpstreamNoiseMargin"`
 }
 
 // GetDSLStatus retrieves DSL status from Fritz!Box
@@ -28,12 +28,12 @@ func GetDSLStatus(soapClient *soap.Client) (*DSLStatusResponse, error) {
 	if soapClient == nil {
 		// Return mock data for testing
 		return &DSLStatusResponse{
-			NewDownstreamCurrRate:     "100000",
-			NewUpstreamCurrRate:       "40000",
-			NewDownstreamMaxRate:      "120000",
-			NewUpstreamMaxRate:        "50000",
-			NewDownstreamNoiseMargin:  "10",
-			NewUpstreamNoiseMargin:    "15",
+			NewDownstreamCurrRate:    "100000",
+			NewUpstreamCurrRate:      "40000",
+			NewDownstreamMaxRate:     "120000",
+			NewUpstreamMaxRate:       "50000",
+			NewDownstreamNoiseMargin: "10",
+			NewUpstreamNoiseMargin:   "15",
 		}, nil
 	}
 

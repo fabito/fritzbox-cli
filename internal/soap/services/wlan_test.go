@@ -8,7 +8,7 @@ import (
 // Mock SOAP caller for testing
 type mockSOAPCaller struct {
 	response string
-	err       error
+	err      error
 }
 
 func (m *mockSOAPCaller) Call(servicePath, action, body string) (string, error) {
@@ -36,21 +36,52 @@ func TestGetWLANQRCode_InvalidBand(t *testing.T) {
 	}
 }
 
+// mockQRCodeSOAPCaller is a mock that returns different responses based on the action
+type mockQRCodeSOAPCaller struct {
+	getInfoResponse         string
+	getSecurityKeysResponse string
+	err                     error
+}
+
+func (m *mockQRCodeSOAPCaller) Call(servicePath, action, body string) (string, error) {
+	if m.err != nil {
+		return "", m.err
+	}
+	// Return different responses based on the SOAP action
+	if action == "urn:dslforum-org:service:WLANConfiguration:1#GetInfo" {
+		return m.getInfoResponse, nil
+	}
+	if action == "urn:dslforum-org:service:WLANConfiguration:1#GetSecurityKeys" {
+		return m.getSecurityKeysResponse, nil
+	}
+	return "", nil
+}
+
 func TestGetWLANQRCode_MockClient(t *testing.T) {
-	// Mock response with WPS info
-	mockResp := `<?xml version="1.0"?>
+	// Mock response for GetInfo
+	getInfoResp := `<?xml version="1.0"?>
 <Envelope>
 <Body>
-<GetDefaultWPSInfoResponse>
+<GetInfoResponse>
 <NewSSID>MyWifi</NewSSID>
-<NewKeyPassphrase>MySecretKey123</NewKeyPassphrase>
-</GetDefaultWPSInfoResponse>
+</GetInfoResponse>
 </Body>
 </Envelope>`
 
-	mockClient := &mockSOAPCaller{
-		response: mockResp,
-		err:       nil,
+	// Mock response for GetSecurityKeys
+	getSecurityKeysResp := `<?xml version="1.0"?>
+<Envelope>
+<Body>
+<GetSecurityKeysResponse>
+<NewKeyPassphrase>MySecretKey123</NewKeyPassphrase>
+</GetSecurityKeysResponse>
+</Body>
+</Envelope>`
+
+	mockClient := &mockQRCodeSOAPCaller{
+		getInfoResponse:         getInfoResp,
+		getSecurityKeysResponse: getSecurityKeysResp,
+		err:                     nil,
 	}
 
 	qrCode, err := GetWLANQRCode(mockClient, 1)
@@ -68,7 +99,7 @@ func TestGetWLANQRCode_MockClient(t *testing.T) {
 func TestGetWLANQRCode_SoapError(t *testing.T) {
 	mockClient := &mockSOAPCaller{
 		response: "",
-		err:       errors.New("SOAP call failed"),
+		err:      errors.New("SOAP call failed"),
 	}
 
 	_, err := GetWLANQRCode(mockClient, 1)
@@ -128,9 +159,9 @@ func TestGetWLANChannel_NilClient(t *testing.T) {
 func TestGetWLANChannel_SoapError(t *testing.T) {
 	mockClient := &mockSOAPCaller{
 		response: "",
-		err:       errors.New("SOAP call failed"),
+		err:      errors.New("SOAP call failed"),
 	}
-	
+
 	_, err := GetWLANChannel(mockClient, 1)
 	if err == nil {
 		t.Error("Expected error from SOAP call")

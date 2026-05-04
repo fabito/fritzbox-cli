@@ -24,7 +24,7 @@ type HostListResponse struct {
 // The XML tags flatten the nested SOAP structure
 // Body > GetHostNumberOfEntriesResponse > FieldName
 type HostNumberResponse struct {
-	XMLName              xml.Name `xml:"Envelope"`
+	XMLName                xml.Name `xml:"Envelope"`
 	NewHostNumberOfEntries string   `xml:"Body>GetHostNumberOfEntriesResponse>NewHostNumberOfEntries"`
 }
 

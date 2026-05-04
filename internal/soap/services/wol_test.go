@@ -30,7 +30,7 @@ func TestWakeOnLAN_InvalidMAC(t *testing.T) {
 	// Test with invalid MAC (should still send, Fritz!Box validates)
 	mockClient := &mockSOAPCaller{
 		response: `<?xml version="1.0"?><Envelope><Body><X_AVM-DE_WakeOnLANByMACAddressResponse></X_AVM-DE_WakeOnLANByMACAddressResponse></Body></Envelope>`,
-		err:       nil,
+		err:      nil,
 	}
 
 	err := WakeOnLAN("INVALID:MAC", mockClient)
@@ -44,7 +44,7 @@ func TestWakeOnLAN_Error(t *testing.T) {
 	// Test with error from SOAP client
 	mockClient := &mockSOAPCaller{
 		response: "",
-		err:       fmt.Errorf("connection failed"),
+		err:      fmt.Errorf("connection failed"),
 	}
 
 	err := WakeOnLAN("AA:BB:CC:DD:EE:FF", mockClient)

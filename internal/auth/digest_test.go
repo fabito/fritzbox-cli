@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"testing"
 	"sync"
+	"testing"
 )
 
 func TestNewDigestClient(t *testing.T) {
@@ -131,14 +131,14 @@ func TestParseAuthHeader(t *testing.T) {
 
 func TestGenerateAuthorization(t *testing.T) {
 	client := &DigestClient{
-		username: "testuser",
-		password: "testpass",
-		realm:    "testrealm",
-		nonce:    "testnonce",
-		opaque:   "testopaque",
-		qop:      "auth",
+		username:  "testuser",
+		password:  "testpass",
+		realm:     "testrealm",
+		nonce:     "testnonce",
+		opaque:    "testopaque",
+		qop:       "auth",
 		algorithm: "MD5",
-		nc:       1,
+		nc:        1,
 	}
 
 	req := httptest.NewRequest("POST", "http://192.168.178.1:49000/upnp/control/deviceinfo", nil)
@@ -195,13 +195,13 @@ func TestDigestClientConcurrentAccess(t *testing.T) {
 
 func TestGenerateAuthorizationIncrementNc(t *testing.T) {
 	client := &DigestClient{
-		username: "testuser",
-		password: "testpass",
-		realm:    "testrealm",
-		nonce:    "testnonce",
-		qop:      "auth",
+		username:  "testuser",
+		password:  "testpass",
+		realm:     "testrealm",
+		nonce:     "testnonce",
+		qop:       "auth",
 		algorithm: "MD5",
-		nc:       0,
+		nc:        0,
 	}
 
 	req := httptest.NewRequest("POST", "http://test/uri", nil)
@@ -237,9 +237,9 @@ func extractNc(authHeader string) string {
 // Test helper to verify HA1 calculation
 func TestHA1Calculation(t *testing.T) {
 	client := &DigestClient{
-		username: "testuser",
-		password: "testpass",
-		realm:    "testrealm",
+		username:  "testuser",
+		password:  "testpass",
+		realm:     "testrealm",
 		algorithm: "MD5",
 	}
 

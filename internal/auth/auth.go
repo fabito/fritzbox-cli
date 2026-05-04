@@ -11,8 +11,8 @@ import (
 // Auth provides authentication services for Fritz!Box communication
 type Auth struct {
 	DigestClient *DigestClient
-	SIDManager  *SIDManager
-	HTTPClient  *http.Client
+	SIDManager   *SIDManager
+	HTTPClient   *http.Client
 }
 
 // NewAuth creates a new Auth instance with default settings
@@ -22,7 +22,7 @@ func NewAuth(username, password string, timeout time.Duration, insecureSkipVerif
 	// Create TLS config
 	tlsCfg := &tls.Config{
 		InsecureSkipVerify: insecureSkipVerify,
-		MinVersion:       tls.VersionTLS12,
+		MinVersion:         tls.VersionTLS12,
 	}
 
 	// Create HTTP client
@@ -39,7 +39,7 @@ func NewAuth(username, password string, timeout time.Duration, insecureSkipVerif
 	// Create auth instance (SIDManager will be set up later when SOAP client is available)
 	return &Auth{
 		DigestClient: digestClient,
-		HTTPClient:  httpClient,
+		HTTPClient:   httpClient,
 	}, nil
 }
 

@@ -18,11 +18,11 @@ type Profile struct {
 
 // DeviceProfile represents a device with its assigned profile
 type DeviceProfile struct {
-	DeviceID   string `json:"device_id"`
-	DeviceName string `json:"name"`
-	MACAddress string `json:"mac"`
-	IPAddress  string `json:"ip"`
-	ProfileID  string `json:"profile_id"`
+	DeviceID    string `json:"device_id"`
+	DeviceName  string `json:"name"`
+	MACAddress  string `json:"mac"`
+	IPAddress   string `json:"ip"`
+	ProfileID   string `json:"profile_id"`
 	ProfileName string `json:"profile_name"`
 }
 
@@ -38,9 +38,9 @@ func (c *Client) ListDevicesWithProfiles() ([]DeviceProfile, error) {
 	// Build URL and POST data
 	profileURL := fmt.Sprintf("%s/data.lua", c.baseURL)
 	formData := url.Values{
-		"xhr":  {"1"},
-		"sid":  {sid},
-		"page": {"netDev"},
+		"xhr":   {"1"},
+		"sid":   {sid},
+		"page":  {"netDev"},
 		"xhrId": {"all"},
 	}
 
@@ -80,10 +80,10 @@ func (c *Client) ListDevicesWithProfiles() ([]DeviceProfile, error) {
 
 	var dataObj struct {
 		Active []struct {
-			Name  string `json:"name"`
-			MAC   string `json:"mac"`
-			UID   string `json:"UID"`
-			IPv4  struct {
+			Name string `json:"name"`
+			MAC  string `json:"mac"`
+			UID  string `json:"UID"`
+			IPv4 struct {
 				IP string `json:"ip"`
 			} `json:"ipv4"`
 			// Profile info may be in different fields
@@ -103,11 +103,11 @@ func (c *Client) ListDevicesWithProfiles() ([]DeviceProfile, error) {
 	devices := make([]DeviceProfile, 0, len(dataObj.Active))
 	for _, d := range dataObj.Active {
 		dp := DeviceProfile{
-			DeviceID:   d.UID,
-			DeviceName: d.Name,
-			MACAddress: d.MAC,
-			IPAddress:  d.IPv4.IP,
-			ProfileID:  d.ProfileID,
+			DeviceID:    d.UID,
+			DeviceName:  d.Name,
+			MACAddress:  d.MAC,
+			IPAddress:   d.IPv4.IP,
+			ProfileID:   d.ProfileID,
 			ProfileName: d.ProfileName,
 		}
 		slog.Debug("ListDevicesWithProfiles: device", "name", d.Name, "mac", d.MAC, "ip", d.IPv4.IP)
@@ -129,10 +129,10 @@ func (c *Client) ListAvailableProfiles() ([]Profile, error) {
 	// Build URL and POST data
 	profileURL := fmt.Sprintf("%s/data.lua", c.baseURL)
 	formData := url.Values{
-		"xhr":     {"1"},
-		"sid":      {sid},
-		"page":     {"kidPro"},
-		"xhrId":   {"all"},
+		"xhr":   {"1"},
+		"sid":   {sid},
+		"page":  {"kidPro"},
+		"xhrId": {"all"},
 	}
 
 	slog.Debug("ListAvailableProfiles: requesting", "url", profileURL)
@@ -161,7 +161,7 @@ func (c *Client) ListAvailableProfiles() ([]Profile, error) {
 	// Format: <input type="radio" ... id="filtprof1" title="Standard" ...>
 	html := string(body)
 	profiles := []Profile{}
-	
+
 	// Find all filtprof patterns
 	// Use simple string search to find id="filtprofXXX"
 	for i := 0; i < len(html); {
@@ -170,18 +170,18 @@ func (c *Client) ListAvailableProfiles() ([]Profile, error) {
 			break
 		}
 		idx += i // Adjust to absolute position
-		
+
 		// Extract the full id="filtprofXXX"
 		idStart := idx
 		idEnd := idx + len("filtprof")
 		for idEnd < len(html) && html[idEnd] >= '0' && html[idEnd] <= '9' {
 			idEnd++
 		}
-		
+
 		if idEnd > idStart {
 			profileID := html[idStart:idEnd] // e.g., "filtprof1"
 			numericID := strings.TrimPrefix(profileID, "filtprof")
-			
+
 			// Look for title="..." before this id
 			titleStart := strings.LastIndex(html[:idStart], "title=\"")
 			if titleStart != -1 {
@@ -189,7 +189,7 @@ func (c *Client) ListAvailableProfiles() ([]Profile, error) {
 				titleEnd := strings.Index(html[titleStart:], "\"")
 				if titleEnd != -1 {
 					profileName := html[titleStart : titleStart+titleEnd]
-					
+
 					profiles = append(profiles, Profile{
 						ID:   numericID,
 						Name: profileName,
@@ -197,10 +197,10 @@ func (c *Client) ListAvailableProfiles() ([]Profile, error) {
 				}
 			}
 		}
-		
+
 		i = idEnd // Move past this match
 	}
-	
+
 	// Remove duplicates (same profile ID might appear multiple times in HTML)
 	seen := map[string]bool{}
 	uniqueProfiles := []Profile{}
@@ -210,7 +210,7 @@ func (c *Client) ListAvailableProfiles() ([]Profile, error) {
 			uniqueProfiles = append(uniqueProfiles, p)
 		}
 	}
-	
+
 	return uniqueProfiles, nil
 }
 
@@ -312,11 +312,11 @@ func (c *Client) SetDeviceProfile(deviceID string, profileID string) error {
 	profileURL := fmt.Sprintf("%s/data.lua", c.baseURL)
 	formData := url.Values{
 		"sid":          {sid},
-		"dev_name":      {deviceName},
-		"dev":           {deviceID},
-		"kisi_profile":  {filtprofID},
-		"page":          {"edit_device"},
-		"apply":         {"true"},
+		"dev_name":     {deviceName},
+		"dev":          {deviceID},
+		"kisi_profile": {filtprofID},
+		"page":         {"edit_device"},
+		"apply":        {"true"},
 	}
 
 	// Make POST request
@@ -337,11 +337,12 @@ func (c *Client) SetDeviceProfile(deviceID string, profileID string) error {
 
 // parseProfilesFromHTML extracts profile IDs and names from HTML
 // Format from Fritz!Box:
-//   <td class="name" title="Standard" data-label="Standard"><span>Standard</span></td>
-//   <button type="submit" name="edit" value="filtprof1" class="icon edit" title="Edit"></button>
+//
+//	<td class="name" title="Standard" data-label="Standard"><span>Standard</span></td>
+//	<button type="submit" name="edit" value="filtprof1" class="icon edit" title="Edit"></button>
 func parseProfilesFromHTML(html string) []Profile {
 	lines := strings.Split(html, "\n")
-	
+
 	// Extract profile names from title="NAME"
 	names := []string{}
 	for _, line := range lines {
@@ -367,7 +368,7 @@ func parseProfilesFromHTML(html string) []Profile {
 			}
 		}
 	}
-	
+
 	// Extract profile IDs from value="filtprofXXXX"
 	ids := []string{}
 	for _, line := range lines {
@@ -385,13 +386,13 @@ func parseProfilesFromHTML(html string) []Profile {
 			}
 		}
 	}
-	
+
 	// Pair them
 	profiles := []Profile{}
 	for i := 0; i < len(names) && i < len(ids); i++ {
 		profiles = append(profiles, Profile{ID: ids[i], Name: names[i]})
 	}
-	
+
 	return profiles
 }
 
